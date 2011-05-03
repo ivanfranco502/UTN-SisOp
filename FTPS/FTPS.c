@@ -19,7 +19,7 @@ void inicializarVectorDeThreads(){
 }
 
 
-/*unsigned*/ __stdcall threadClienteNuevo( void* pArguments ){
+unsigned __stdcall threadClienteNuevo( void* pArguments ){
     // Thread de datos
 	
 	
