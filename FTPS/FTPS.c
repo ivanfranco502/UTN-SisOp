@@ -21,7 +21,12 @@ void inicializarVectorDeThreads(){
 
 /*unsigned*/ __stdcall threadClienteNuevo( void* pArguments ){
     // Thread de datos
-	int *remoteClient;
+	
+	
+	HANDLE  heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
+
+	
+	int *remoteClient  = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(int));
 	remoteClient = (int*) pArguments;
 	
 	/* aca va el send y rcv de datos */
@@ -30,6 +35,8 @@ void inicializarVectorDeThreads(){
 	
 	
 	
+	//HeapFree(heap, HEAP_NO_SERIALIZE, remoteClient);
+	HeapDestroy(heap);
 	threadsFinalizados[*remoteClient]=1;
     _endthreadex( 0 );
     
