@@ -55,8 +55,9 @@ int main() {
 		printf("Error aceptando conexion\n");
 		return 3;
 	}
-    send(asd,"prueba archivo y contenido\r\n",strlen("prueba archivo y contenido\r\n"),0);
 
+	Sleep(6000);
+    send(asd,"prueba archivo y contenido\r\n",strlen("prueba archivo y contenido\r\n"),0);
 	closesocket(asd);
 	closesocket(sd);
 
