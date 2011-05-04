@@ -6,57 +6,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
+#include "funcionesftp.h"
 
 #define SOCKET_MAX_BUFFER 100
-
-int enviar_comando (int cliente,char *comando,char *buffer){
-        
-        int corrector;
-
-        send(cliente,comando,strlen(comando),0);
-        printf("enviado comando %s\n",comando);
-        corrector=recv(cliente,buffer,SOCKET_MAX_BUFFER,0);
-        buffer[corrector]='\0';
-        printf("%s\n",buffer);
-	sleep(1);
-        return 0;
-}
-
-
-int enviar_comando_no_recv (int cliente,char *comando,char *buffer){
-
-        int corrector;
-
-        send(cliente,comando,strlen(comando),0);
-        printf("enviado comando %s\n",comando);
-
-        sleep(1);
-        return 0;
-}
-
-
-
-
-int wait_for (int cliente,char *comando,char *buffer){
-        
-        int corrector;
-
-        while(strcmp(buffer,comando)){
-                send(cliente,"500 NO PERMITIDO\r\n",strlen("500 NO PERMITIDO\r\n"),0);
-                printf("le mande el 500\n");
-                corrector=recv(cliente,buffer,SOCKET_MAX_BUFFER,0);
-                buffer[corrector]='\0';
-                printf("%s\n",buffer);
-		sleep(2);
-        }
-	return 0;
-}
-
-
-//int enviar_comando (int,char *);
-//	bool wait_for (int,char *);
-
+ 
 
 int main (){
 
@@ -65,7 +18,7 @@ int main (){
         char buffer[SOCKET_MAX_BUFFER];
         char msj_bienvenida[20]="bienvenido sorete\0";
         char mensaje[50];
-        int pid=0;
+
 	int corrector;
 
         int fd_vec[10];         //se me ocurre 1 server y 9 clientes
