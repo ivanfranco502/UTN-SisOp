@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThreadDatos", "ThreadDatos\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThreadDatosRETR", "ThreadDatosCD\ThreadDatosCD.vcproj", "{3A7D4921-A6A4-46EC-A29C-48C4A9CBCF73}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThreadDatosSTOR", "ThreadDatosSTOR\ThreadDatosSTOR.vcproj", "{7FE890B8-3296-4E9E-ADF9-23E7749EB85B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -25,6 +27,10 @@ Global
 		{3A7D4921-A6A4-46EC-A29C-48C4A9CBCF73}.Debug|Win32.Build.0 = Debug|Win32
 		{3A7D4921-A6A4-46EC-A29C-48C4A9CBCF73}.Release|Win32.ActiveCfg = Release|Win32
 		{3A7D4921-A6A4-46EC-A29C-48C4A9CBCF73}.Release|Win32.Build.0 = Release|Win32
+		{7FE890B8-3296-4E9E-ADF9-23E7749EB85B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7FE890B8-3296-4E9E-ADF9-23E7749EB85B}.Debug|Win32.Build.0 = Debug|Win32
+		{7FE890B8-3296-4E9E-ADF9-23E7749EB85B}.Release|Win32.ActiveCfg = Release|Win32
+		{7FE890B8-3296-4E9E-ADF9-23E7749EB85B}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
