@@ -10,6 +10,53 @@
 
 #define SOCKET_MAX_BUFFER 100
 
+int enviar_comando (int cliente,char *comando,char *buffer){
+        
+        int corrector;
+
+        send(cliente,comando,strlen(comando),0);
+        printf("enviado comando %s\n",comando);
+        corrector=recv(cliente,buffer,SOCKET_MAX_BUFFER,0);
+        buffer[corrector]='\0';
+        printf("%s\n",buffer);
+	sleep(1);
+        return 0;
+}
+
+
+int enviar_comando_no_recv (int cliente,char *comando,char *buffer){
+
+        int corrector;
+
+        send(cliente,comando,strlen(comando),0);
+        printf("enviado comando %s\n",comando);
+
+        sleep(1);
+        return 0;
+}
+
+
+
+
+int wait_for (int cliente,char *comando,char *buffer){
+        
+        int corrector;
+
+        while(strcmp(buffer,comando)){
+                send(cliente,"500 NO PERMITIDO\r\n",strlen("500 NO PERMITIDO\r\n"),0);
+                printf("le mande el 500\n");
+                corrector=recv(cliente,buffer,SOCKET_MAX_BUFFER,0);
+                buffer[corrector]='\0';
+                printf("%s\n",buffer);
+		sleep(2);
+        }
+	return 0;
+}
+
+
+//int enviar_comando (int,char *);
+//	bool wait_for (int,char *);
+
 
 int main (){
 
@@ -84,27 +131,32 @@ int main (){
                         remote_client = accept (descriptor, (struct sockaddr *)remote_address, &addrlen);
                         contador_descriptores++;
                         fd_vec[contador_descriptores]=remote_client;
-                        printf("nueva conexion, el nuevo socket es:   %d\n ",remote_client);
+                        printf("nueva conexion, el nuevo socket es:   %d\n",remote_client);
                         printf("el contador de descriptores esta en %d\n",contador_descriptores);
 
 				//arranco charla con ftp
 
+			enviar_comando(remote_client,"220 POWER\r\n",buffer);
+/*
 			send(remote_client,"220 POWER\r\n",strlen("220 POWER\r\n"),0);
 			printf("le mande el 220 de mierda\n");
 			corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
 			buffer[corrector]='\0';
 			printf("%s\n",buffer);
-
-
+*/
+			enviar_comando(remote_client,"230 POWER\r\n",buffer);
+/*
                         send(remote_client,"230 POWER\r\n",strlen("230 POWER\r\n"),0);
                         printf("le mande el 230 de mierda\n");
                         corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
                         buffer[corrector]='\0';
                         printf("%s\n",buffer);
-
+*/
 			//espero por PWD y le indico el directorio
 
-			while(strcmp(buffer,"PWD\r\n")){
+			wait_for(remote_client,"PWD\r\n",buffer);
+
+/*			while(strcmp(buffer,"PWD\r\n")){
 
                         	send(remote_client,"500 NO PERMITIDO\r\n",strlen("500 NO PERMITIDO\r\n"),0);
                         	printf("le mande el 500 de mierda\n");
@@ -114,19 +166,21 @@ int main (){
 			
 				sleep(2);
 			}
-
-
-
+*/
+			enviar_comando(remote_client,"257 \"/\" Is the current directory \r\n",buffer);
+/*
                         send(remote_client,"257 \"/\" Is the current directory \r\n",strlen("257 \"/\" Is the current directory \r\n"),0);
                         printf("le mande el 257 de mierda\n");
                         corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
                         buffer[corrector]='\0';
                         printf("%s\n",buffer);
 
-
+*/
 			//espero a que me diga el tipo 
 
-			while(strcmp(buffer,"TYPE A\r\n")){
+			wait_for(remote_client,"TYPE A\r\n",buffer);
+
+/*			while(strcmp(buffer,"TYPE A\r\n")){
                   		send(remote_client,"500 NO PERMITIDO\r\n",strlen("500 NO PERMITIDO\r\n"),0);
                         	printf("le mande el 500 de mierda\n");
                         	corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
@@ -136,40 +190,62 @@ int main (){
 				sleep(1);
 
 			}
-                                send(remote_client,"200 Type set to A\r\n",strlen("200 Type set to A\r\n"),0);
-                                printf("le mande el 200 de mierda\n");
-                                corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
-                                buffer[corrector]='\0';
-                                printf("%s\n",buffer);
-
-				//arranco con el otro puerto (el de datos)  // le paso mi ip y el puerto 5300 al que se tiene que conectar el cliente
-				send(remote_client,"227 Entering Pasive Mode (192,168,1,104,20,180)\r\n",strlen("227 Entering Pasive Mode (192,168,1,104,20,180)\r\n"),0);
-                                printf("le mande el 227 de mierda\n");
-//	                        data_client = accept (data_socket, (struct sockaddr *)remote_address, &addrlen);
-                                corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
-                                buffer[corrector]='\0';
-                                printf("%s\n",buffer);
-
-				sleep(2);
-
-                                send(remote_client,"150 Openning ASCII mode\r\n",strlen("150 Openning ASCII mode\r\n"),0);
-                                printf("le mande el 150 de mierda\n");
-//                              data_client = accept (data_socket, (struct sockaddr *)remote_address, &addrlen);
-//                              corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
-//                              buffer[corrector]='\0';
-//                              printf("%s\n",buffer);
-				sleep(10);
-
-                                send(remote_client,"226 Transfer Complete\r\n",strlen("226 Transfer Complete\r\n"),0);
-                                printf("le mande el 226 de mierda\n");
-//                              data_client = accept (data_socket, (struct sockaddr *)remote_address, &addrlen);
-                                corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
-                                buffer[corrector]='\0';
-                                printf("%s\n",buffer);
+*/
 
 
-				close(remote_client);
-				sleep(10);
+			enviar_comando(remote_client,"200 Type set to A\r\n",buffer);
+/*
+                        send(remote_client,"200 Type set to A\r\n",strlen("200 Type set to A\r\n"),0);
+                        printf("le mande el 200 de mierda\n");
+                        corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
+                        buffer[corrector]='\0';
+                        printf("%s\n",buffer);
+*/
+
+
+			//arranco con el otro puerto (el de datos)  // le paso mi ip y el puerto 5300 al que se tiene que conectar el cliente
+			sleep(5);
+			enviar_comando(remote_client,"227 Entering Pasive Mode (192,168,1,104,20,180)\r\n",buffer);
+
+/*
+			send(remote_client,"227 Entering Pasive Mode (192,168,1,104,20,180)\r\n",strlen("227 Entering Pasive Mode (192,168,1,104,20,180)\r\n"),0);
+                        printf("le mande el 227 de mierda\n");
+//	                data_client = accept (data_socket, (struct sockaddr *)remote_address, &addrlen);
+                        corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
+                        buffer[corrector]='\0';
+                        printf("%s\n",buffer);
+
+			sleep(2);
+*/
+
+			sleep(10);
+			enviar_comando_no_recv(remote_client,"150 Openning ASCII mode\r\n",buffer);
+
+/*
+                        send(remote_client,"150 Openning ASCII mode\r\n",strlen("150 Openning ASCII mode\r\n"),0);
+                        printf("le mande el 150 de mierda\n");
+//                      data_client = accept (data_socket, (struct sockaddr *)remote_address, &addrlen);
+//                      corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
+//                      buffer[corrector]='\0';
+//                      printf("%s\n",buffer);
+			sleep(10);
+*/
+ 			sleep(10);
+			enviar_comando(remote_client,"226 Transfer Complete\r\n",buffer);
+
+/*
+                        send(remote_client,"226 Transfer Complete\r\n",strlen("226 Transfer Complete\r\n"),0);
+                        printf("le mande el 226 de mierda\n");
+//                      data_client = accept (data_socket, (struct sockaddr *)remote_address, &addrlen);
+                        corrector=recv(remote_client,buffer,SOCKET_MAX_BUFFER,0);
+                        buffer[corrector]='\0';
+                        printf("%s\n",buffer);
+*/
+
+
+
+			close(remote_client);
+			sleep(10);
                 }
 
 
