@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="FTPS"
-	ProjectGUID="{97FBDDB0-944D-418B-B3BC-0F927F3C9655}"
+	ProjectGUID="{4511AD8D-EC77-4076-8ECD-52E8421C9FB9}"
 	RootNamespace="FTPS"
 	Keyword="Win32Proj"
 	>
@@ -179,12 +179,20 @@
 				RelativePath="..\FTPS.c"
 				>
 			</File>
+			<File
+				RelativePath="..\funcionesftp.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath="..\funcionesftp.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
