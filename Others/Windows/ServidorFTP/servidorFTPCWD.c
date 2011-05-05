@@ -146,20 +146,17 @@ int main() {
 	n = 0;
 	pasoComando = 0;
 	aux = 0;
-	for(aux =0; aux < 20; aux++){
-		nomArchivo[aux] = '\0' ;
-	}
-	aux = 0;
 	while (buffer[n] != '\0'){
 		if (buffer[n] == ' '){
 			pasoComando = 1;
 		}
-		if (pasoComando) {
+		if (pasoComando && (buffer[n] != ' ')) {
 			nomArchivo[aux]= buffer[n];
+			aux++;
 		}
-		aux++;
 		n++;
 	}
+	nomArchivo[aux]='\0';
 	strcpy(texto,"257 \"");
 	strcat(texto,nomArchivo);
 	strcat(texto,"\" is the current directory\r\n");
@@ -180,7 +177,8 @@ int main() {
 	corrector=recv(asd,buffer,SOCKET_MAX_BUFFER,0);
 	buffer[corrector]='\0';
 	printf("%s\n",buffer);
-
+	
+	printf("%s",texto);
 	send(asd,texto,strlen(texto),0);
     printf("le mande el 257 \n");
 
