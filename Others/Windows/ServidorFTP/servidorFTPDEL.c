@@ -161,4 +161,3 @@ int main() {
 	closesocket(sd);
 	WSACleanup();
 }
-	Sleep(3000);
