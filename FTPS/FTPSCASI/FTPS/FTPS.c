@@ -6,8 +6,6 @@
 #include <string.h>
 #include "funcionesftp.h"
 
-
-
 #define CANTIDAD_CLIENTES 65535
 #define SOCKET_MAX_BUFFER 100
 
@@ -23,6 +21,13 @@ typedef struct  {
 				int socket_comando;
 
                 } reg_cliente;
+
+//estructura que tengo que vectorizar con las funciones para cada comando
+typedef struct 	{
+		
+		int (*pfunc)(char *,reg_cliente *);
+		char mensaje[5];
+		} t_command_handler;
 
 int threadsFinalizados[CANTIDAD_CLIENTES]; /*Empiezan en cero y se ponen a uno cuando finaliza el thread */
 unsigned threadID[CANTIDAD_CLIENTES];
@@ -45,8 +50,8 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	struct sockaddr_in *local_address = HeapAlloc(heapDatos, 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(heapDatos, 0, addrlen);
 	char buffer[SOCKET_MAX_BUFFER];
-	int *remoteClient  = HeapAlloc(heapDatos, HEAP_NO_SERIALIZE, sizeof(int));
-	remoteClient = (int*) pArguments;
+	reg_cliente *datos_cliente  = HeapAlloc(heapDatos, HEAP_NO_SERIALIZE, sizeof(reg_cliente));
+	remoteClient = (reg_cliente*) pArguments;
 
 
     local_address->sin_family = AF_INET;
@@ -95,8 +100,31 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	char buffer[100],
 		 comando[5],
 		 argumento[50];
-	int *remoteClient  = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(int));
+	reg_cliente *datos_cliente  = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(datos_cliente));
 	remoteClient = (int*) pArguments;
+	int (*puntero)(char*, reg_cliente*);
+	t_command_handler vector_comandos[10];
+
+	vector_comandos[0].pfunc=&rta_PASV;
+	strcpy(vector_comandos[0].mensaje,"PASV");
+	vector_comandos[1].pfunc=&rta_NOOP;
+	strcpy(vector_comandos[1].mensaje,"NOOP");
+	vector_comandos[2].pfunc=&rta_DELE;
+	strcpy(vector_comandos[2].mensaje,"DELE");
+	vector_comandos[3].pfunc=&rta_TYPE;
+	strcpy(vector_comandos[3].mensaje,"TYPE");
+	vector_comandos[4].pfunc=&rta_LIST;
+	strcpy(vector_comandos[4].mensaje,"LIST");
+	vector_comandos[5].pfunc=&rta_CWD;
+	strcpy(vector_comandos[5].mensaje,"CWD");
+	vector_comandos[6].pfunc=&rta_PWD;
+	strcpy(vector_comandos[6].mensaje,"PWD");
+	vector_comandos[7].pfunc=&rta_HELP;
+	strcpy(vector_comandos[7].mensaje,"HELP");
+	vector_comandos[8].pfunc=&rta_RETR;
+	strcpy(vector_comandos[8].mensaje,"RETR");
+	vector_comandos[9].pfunc=&rta_STOR;
+	strcpy(vector_comandos[9].mensaje,"STOR");
 	
 	send(*remoteClient,"220 POWER\r\n", strlen("220 POWER\r\n"),0);
     corrector=recv(*remoteClient,buffer,SOCKET_MAX_BUFFER,0);
@@ -128,14 +156,14 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 int main(){ 
     HANDLE hThread[CANTIDAD_CLIENTES];
     SOCKET descriptor;
-	int *remoteClient;
+	reg_cliente *datos_cliente;
 	int a, addrlen = sizeof(struct sockaddr_in);
 	unsigned i;
 	struct sockaddr_in *local_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
 	
 	printLog("Main FTPS","0","0","INFO","Archivo de Configuracion");
-	remoteClient = (int *) HeapAlloc(GetProcessHeap(), 0, sizeof(int));
+	datos_cliente = (reg_cliente *) HeapAlloc(GetProcessHeap(), 0, sizeof(reg_cliente));
 
 	if ((a = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
 		printf("WSAStartup() devolvio error nro %d\n", a );
@@ -157,8 +185,8 @@ int main(){
 	
 	while(1){
 		if((*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
-			printf("%d\n", *remoteClient);
-			hThread[*remoteClient] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) remoteClient, 0, &threadID[*remoteClient]);
+			printf("%d\n", *datos_cliente);
+			hThread[*datos_cliente] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) datos_cliente, 0, &threadID[*datos_cliente]);
 			printLog("New Client","0",threadID[*remoteClient],"INFO","Conexion Nuevo cliente al puerto ftp");
 
 		}
