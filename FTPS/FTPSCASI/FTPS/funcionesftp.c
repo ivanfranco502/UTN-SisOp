@@ -6,24 +6,6 @@
 
 #define SOCKET_MAX_BUFFER 100
 
-typedef struct  {
-
-//registro del cliente TYPE, PUERTO DE DATOS, CURRENT PATH, QUE MAS?
-                char type[8];
-                int puerto_datos;
-                char current_path[100];
-				int socket_comando;
-
-                } reg_cliente;
-
-//estructura que tengo que vectorizar con las funciones para cada comando
-typedef struct 	{
-		
-		int (*pfunc)(char *,reg_cliente *);
-		char mensaje[5];
-		} t_command_handler;
-
-
 //funciones de respuesta!! hay que agregar el codigo de ivan
 //prototipos, podrian ir en el .h dps vemoooos
 
@@ -206,33 +188,6 @@ char *obtenerParametrosParaPASV(char *IP, int puerto){
 	return (parametrosPASV);
 }
 
-int para_el_main(void){
-
-int (*puntero)(char*, reg_cliente*);
-
-t_command_handler vector_comandos[10];
-
-vector_comandos[0].pfunc=&rta_PASV;
-strcpy(vector_comandos[0].mensaje,"PASV");
-vector_comandos[1].pfunc=&rta_NOOP;
-strcpy(vector_comandos[1].mensaje,"NOOP");
-vector_comandos[2].pfunc=&rta_DELE;
-strcpy(vector_comandos[2].mensaje,"DELE");
-vector_comandos[3].pfunc=&rta_TYPE;
-strcpy(vector_comandos[3].mensaje,"TYPE");
-vector_comandos[4].pfunc=&rta_LIST;
-strcpy(vector_comandos[4].mensaje,"LIST");
-vector_comandos[5].pfunc=&rta_CWD;
-strcpy(vector_comandos[5].mensaje,"CWD");
-vector_comandos[6].pfunc=&rta_PWD;
-strcpy(vector_comandos[6].mensaje,"PWD");
-vector_comandos[7].pfunc=&rta_HELP;
-strcpy(vector_comandos[7].mensaje,"HELP");
-vector_comandos[8].pfunc=&rta_RETR;
-strcpy(vector_comandos[8].mensaje,"RETR");
-vector_comandos[9].pfunc=&rta_STOR;
-strcpy(vector_comandos[9].mensaje,"STOR");
-}
 //handler de comandos  recibe el vector de registros (funciones y comandos) el puntero al registro del cliente, el comando y el argumento
 
 int command_handler(t_command_handler *vector_comandos,char *comando, char *argumento,reg_cliente* datos_cliente){
@@ -269,8 +224,6 @@ int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *ti
 	}while((threadID/=10)>0);
 	tID[i] = '\0';
 	reverse(tID);
-
-
 
 	bytesTransferidos = 0;
 
