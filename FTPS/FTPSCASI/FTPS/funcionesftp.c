@@ -252,16 +252,26 @@ int command_handler(t_command_handler *vector_comandos,char *comando, char *argu
 	}
 
 }
-int printLog (char *nombreProceso, char *pIDProceso, char *threadID, char *tipoLog, char *dato){
+int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *tipoLog, char *dato){
 	int bytesTransferidos,
 		n;
 	char log[100];
 	char fecha[13];
+	char tID[6];
+	int i =0;
 	SYSTEMTIME  st;
 	HANDLE out = CreateFileA("ntvc.log", GENERIC_WRITE, 0, NULL, 4, FILE_ATTRIBUTE_NORMAL, NULL);
 	GetLocalTime(&st);
 	sprintf(fecha,"%d:%d:%d.%d", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-		
+	
+	do{
+		tID[i++]= threadID % 10 + '0';
+	}while((threadID/=10)>0);
+	tID[i] = '\0';
+	reverse(tID);
+
+
+
 	bytesTransferidos = 0;
 
 	strcpy(log, "[");

@@ -13,6 +13,7 @@
 
 WSADATA wsaData;
 
+
 typedef struct  {
 
 //registro del cliente TYPE, PUERTO DE DATOS, CURRENT PATH, QUE MAS?
@@ -24,7 +25,7 @@ typedef struct  {
                 } reg_cliente;
 
 int threadsFinalizados[CANTIDAD_CLIENTES]; /*Empiezan en cero y se ponen a uno cuando finaliza el thread */
-
+unsigned threadID[CANTIDAD_CLIENTES];
 
 void inicializarVectorDeThreads(){
 	// Inicializa en cero threadsFinalizados[]
@@ -98,27 +99,27 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	remoteClient = (int*) pArguments;
 	
 	send(*remoteClient,"220 POWER\r\n", strlen("220 POWER\r\n"),0);
-    corrector=recv(cliente,buffer,SOCKET_MAX_BUFFER,0);
+    corrector=recv(*remoteClient,buffer,SOCKET_MAX_BUFFER,0);
     buffer[corrector]='\0';
 	
 	strcpy(comando, obtenerComando(buffer));
 	strcpy(argumento, obtenerParametro(buffer));
-
-	while (strcmp(comando,"PASV")){
-		command_handler(vector_comandos, comando, argumento, datos_cliente);
-		corrector=recv(cliente,buffer,SOCKET_MAX_BUFFER,0);
-		buffer[corrector]='\0';
+	while( (strcmp(comando, "bye")) && (strcmp(comando, "quit")) && (strcmp(comando, "exit")) ){
+		while (strcmp(comando,"PASV")){
+			command_handler(vector_comandos, comando, argumento, datos_cliente);
+			corrector=recv(*remoteClient,buffer,SOCKET_MAX_BUFFER,0);
+			buffer[corrector]='\0';
+		}
+		printLog("Thread Cmd","1",threadID[*remoteClient],"INFO","Conexion al Thread de Datos");
+		hThreadDatos = (HANDLE) _beginthreadex(NULL,0, &threadDeDatos, (void*) remoteClient, 0, NULL);
+		WaitForSingleObject(hThreadDatos, INFINITE);
+		CloseHandle(hThreadDatos);
+		printLog("Thread Cmd", "1", threadID[*remoteClient], "INFO", "Desconexion al Thread de Datos");
+		send(*remoteClient,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
 	}
-	printLog("Thread Cmd","1","1","INFO","Conexion al Thread de Datos");
-	hThreadDatos = (HANDLE) _beginthreadex(NULL,0, &threadDeDatos, (void*) remoteClient, 0, NULL);
-	WaitForSingleObject(hThreadDatos, INFINITE);
-	CloseHandle(hThreadDatos);
-	printLog("Thread Cmd", "1", "1", "INFO", "Desconexion al Thread de Datos");
 
-	send(*remoteClient,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
-	
 	//HeapFree(heap, HEAP_NO_SERIALIZE, remoteClient);
-	HeapDestroy(heap)
+	HeapDestroy(heap);
 	threadsFinalizados[*remoteClient]=1;
     _endthreadex( 0 );
     
@@ -126,10 +127,10 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 
 int main(){ 
     HANDLE hThread[CANTIDAD_CLIENTES];
-    unsigned threadID[CANTIDAD_CLIENTES];
-	SOCKET descriptor;
+    SOCKET descriptor;
 	int *remoteClient;
-	int i, a, addrlen = sizeof(struct sockaddr_in);
+	int a, addrlen = sizeof(struct sockaddr_in);
+	unsigned i;
 	struct sockaddr_in *local_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
 	
@@ -157,13 +158,14 @@ int main(){
 	while(1){
 		if((*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
 			printf("%d\n", *remoteClient);
-			printLog("New Client","0","1","INFO","Conexion Nuevo cliente al puerto ftp");
 			hThread[*remoteClient] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) remoteClient, 0, &threadID[*remoteClient]);
+			printLog("New Client","0",threadID[*remoteClient],"INFO","Conexion Nuevo cliente al puerto ftp");
+
 		}
 
 		for (i=0; i<CANTIDAD_CLIENTES;i++){
 			if (threadsFinalizados[i]){
-				printLog("Disconnect client","0","1", "INFO", "Desconexion cliente al puerto ftp");
+				printLog("Disconnect client","0",threadID[i], "INFO", "Desconexion cliente al puerto ftp");
 				closesocket(i);
 				CloseHandle(hThread[i]);
 			}
