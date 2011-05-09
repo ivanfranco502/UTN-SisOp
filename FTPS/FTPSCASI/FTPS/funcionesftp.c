@@ -5,7 +5,7 @@
 #include <string.h>
 #include "funcionesftp.h"
 
-#define SOCKET_MAX_BUFFER 100
+#define SOCKET_MAX_BUFFER 1000
 
 
 
@@ -38,6 +38,7 @@ int rta_NOOP (char *Response, char *arg,reg_cliente *datos_cliente){
 }
 
 int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
+	datos_cliente->envio_o_recibo='N';
 	strcpy(Response, "250 DELE command successful");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -56,6 +57,9 @@ int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
 }
 
 int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
+	datos_cliente->envio_o_recibo='E';
+	strcpy(datos_cliente->buffer, "-rwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 archivo1.txt\r\n-rwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 archivo2.txt\r\ndrwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 directorio1\r\n");
+				 
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
 	strcat(Response, " mode data connection for file list");
@@ -85,6 +89,7 @@ int rta_HELP (char *Response,char *arg,reg_cliente *datos_cliente){
 }
 
 int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
+	datos_cliente->envio_o_recibo='E';
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
 	strcat(Response, " mode data connection for ");
@@ -95,6 +100,7 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 }
 
 int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
+	datos_cliente->envio_o_recibo='R';
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
 	strcat(Response, "mode data connection for ");
@@ -216,7 +222,9 @@ int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *ti
 	char log[100];
 	char fecha[13];
 	char tID[6];
+	char aux;
 	int i =0;
+	int j, k;
 	SYSTEMTIME  st;
 	HANDLE out = CreateFileA("ntvc.log", GENERIC_WRITE, 0, NULL, 4, FILE_ATTRIBUTE_NORMAL, NULL);
 	GetLocalTime(&st);
@@ -226,7 +234,11 @@ int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *ti
 		tID[i++]= threadID % 10 + '0';
 	}while((threadID/=10)>0);
 	tID[i] = '\0';
-	reverse(tID);
+	for(j = 0, k = i-1; j < k; j++, k--){
+		aux = tID[j];
+		tID[j] = tID[k];
+		tID[k]=aux;
+	}
 
 	bytesTransferidos = 0;
 
