@@ -1,3 +1,19 @@
+typedef struct  {
+
+                char type[8];
+                int puerto_datos;
+                char current_path[100];
+				SOCKET socket_comando;
+				
+                } reg_cliente;
+
+typedef struct 	{
+		
+		int (*pfunc)(char *,reg_cliente *);
+		char mensaje[5];
+		} t_command_handler;
+
+void paraElMain(t_command_handler *);
 char *seleccionadorDeRespuesta (char *, char *, char *, char *, int);
 char *obtenerComando (char *comando);
 char *obtenerParametro (char *comando);
