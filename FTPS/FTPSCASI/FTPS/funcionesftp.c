@@ -3,8 +3,11 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include "funcionesftp.h"
 
 #define SOCKET_MAX_BUFFER 100
+
+
 
 //funciones de respuesta!! hay que agregar el codigo de ivan
 //prototipos, podrian ir en el .h dps vemoooos
@@ -253,4 +256,25 @@ int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *ti
 	return 0;
 }
 
-
+void paraElMain(t_command_handler * vector_comandos){
+	vector_comandos[0].pfunc=&rta_PASV;
+	strcpy(vector_comandos[0].mensaje,"PASV");
+	vector_comandos[1].pfunc=&rta_NOOP;
+	strcpy(vector_comandos[1].mensaje,"NOOP");
+	vector_comandos[2].pfunc=&rta_DELE;
+	strcpy(vector_comandos[2].mensaje,"DELE");
+	vector_comandos[3].pfunc=&rta_TYPE;
+	strcpy(vector_comandos[3].mensaje,"TYPE");
+	vector_comandos[4].pfunc=&rta_LIST;
+	strcpy(vector_comandos[4].mensaje,"LIST");
+	vector_comandos[5].pfunc=&rta_CWD;
+	strcpy(vector_comandos[5].mensaje,"CWD");
+	vector_comandos[6].pfunc=&rta_PWD;
+	strcpy(vector_comandos[6].mensaje,"PWD");
+	vector_comandos[7].pfunc=&rta_HELP;
+	strcpy(vector_comandos[7].mensaje,"HELP");
+	vector_comandos[8].pfunc=&rta_RETR;
+	strcpy(vector_comandos[8].mensaje,"RETR");
+	vector_comandos[9].pfunc=&rta_STOR;
+	strcpy(vector_comandos[9].mensaje,"STOR");
+}
