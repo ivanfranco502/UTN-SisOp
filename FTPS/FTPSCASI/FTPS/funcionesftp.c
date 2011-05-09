@@ -160,7 +160,7 @@ char *obtenerParametro(char *comando){
 	return (parametro);
 }
 
-char *obtenerParametrosParaPASV(char *IP, int puerto){
+char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 	char parametrosPASV[26],
 		 ipModificada[15],
 		 puertoAux[4];
