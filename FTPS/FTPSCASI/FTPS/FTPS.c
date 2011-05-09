@@ -8,7 +8,7 @@
 
 
 #define CANTIDAD_CLIENTES 65535
-#define SOCKET_MAX_BUFFER 100
+#define SOCKET_MAX_BUFFER 1000
 
 WSADATA wsaData;
 
@@ -37,52 +37,56 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	SOCKET descriptorD;
 	int clienteDatos;
 	int addrlen = sizeof(struct sockaddr_in);
+	int cantidad_de_bytes;
+	unsigned puerto = 5300;
 	struct sockaddr_in *local_address = HeapAlloc(heapDatos, 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(heapDatos, 0, addrlen);
 	char buffer[SOCKET_MAX_BUFFER];
 	reg_cliente *datos_cliente  = HeapAlloc(heapDatos, HEAP_NO_SERIALIZE, sizeof(reg_cliente));
 	datos_cliente = (reg_cliente*) pArguments;
-
+	
 
     local_address->sin_family = AF_INET;
 	local_address->sin_addr.s_addr=INADDR_ANY;
-	local_address->sin_port = htons (5300);
+	
+	do{
+		local_address->sin_port = htons (puerto);
+		descriptorD= socket(AF_INET, SOCK_STREAM, 0);
+		puerto++;
+	} while((bind (descriptorD,(struct sockaddr *) local_address, addrlen)) != SOCKET_ERROR);
+	
+	datos_cliente->puerto_datos= puerto-1;
 
-	//printf("%d\n",descriptor= socket(AF_INET, SOCK_STREAM, 0));
-	printf("%d\n",descriptorD= socket(AF_INET, SOCK_STREAM, 0));
-	bind (descriptorD,(struct sockaddr *) local_address, addrlen);
 	listen(descriptorD,100);
 
-
-	// DECIRLE AL DE COMANDOS QUE MANDE EL 227
-
+	SetEvent(datos_cliente->evento1);
 	
 	printf("%d\n", clienteDatos = accept(descriptorD, (struct sockaddr *)remote_address, (void*)&addrlen));
 
-	// ESPERAR QUE ME DIGA QUE HACER (si es list, retr, stor, dele)
-
-	if(clienteDatos!=INVALID_SOCKET){
-		// si es un list
-		send(clienteDatos,"-rwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 archivo1.txt\r\n",
-				 strlen("-rwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 archivo1.txt\r\n"),0);
-		send(clienteDatos,"-rwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 archivo2.txt\r\n",
-				 strlen("-rwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 archivo2.txt\r\n"),0);
-		send(clienteDatos,"drwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 directorio1\r\n",
-				 strlen("drwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 directorio1\r\n"),0);
 	
+	WaitForSingleObject(datos_cliente->evento2, INFINITE);
+		
+
+	switch(datos_cliente->envio_o_recibo){
+		case 'E':
+			send (clienteDatos, datos_cliente->buffer, strlen(datos_cliente->buffer), 0);
+			break;
+		case 'R':
+			recv (clienteDatos, datos_cliente->buffer, SOCKET_MAX_BUFFER, 0);
+			break;
+		default:
+			;//hacer nada
+	}
+			
+
+			
 	// DECIRLE AL DE COMANDOS QUE MANDE EL 226
 
 		
-		//si es un el retr
-		send(clienteDatos, "Contenido del archivo descargado", 
-				 strlen("Contenido del archivo descargado"),0);
 			
 	
-		closesocket(clienteDatos);
-		closesocket(descriptorD);
-	}else
-		printf("No se conectaron al thread de datos\n");
-	HeapDestroy(heapDatos);
+	closesocket(clienteDatos);
+	closesocket(descriptorD);
     _endthreadex( 0 );
 } 
 
@@ -95,11 +99,15 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	char buffer[100],
 		 comando[5],
 		 argumento[50];
+	SOCKET *aux = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	reg_cliente *datos_cliente  = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(datos_cliente));
-	datos_cliente = (reg_cliente*) pArguments;
+	aux = (SOCKET*) pArguments;
+	datos_cliente->socket_comando = *aux;
+	HeapFree(heap, HEAP_NO_SERIALIZE, aux);
+	
 	//int (*puntero)(char*, reg_cliente*);
 
-	
+	datos_cliente->evento1 = CreateEvent(NULL, FALSE, FALSE, NULL);
 	
 	send(datos_cliente->socket_comando,"220 POWER\r\n", strlen("220 POWER\r\n"),0);
     corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
@@ -118,19 +126,20 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 
 		printLog("Thread Cmd","1",threadID[datos_cliente->socket_comando],"INFO","Conexion al Thread de Datos");
 		hThreadDatos = (HANDLE) _beginthreadex(NULL,0, &threadDeDatos, (void*) datos_cliente, 0, NULL);
-	
-	    // ESPERAR QUE DATOS ME DIGA QUE ABRIO EL SOCKET
+	    WaitForSingleObject(datos_cliente->evento1,INFINITE);
 		
-		while ( /*no termina el PASV*/ ){
+		while ( strcmp(comando,"STOR") && strcmp(comando, "RETR") && strcmp(comando, "LIST") && strcmp(comando, "DELE") ){
 			command_handler(vector_comandos, comando, argumento, datos_cliente);
 			corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
 			buffer[corrector]='\0';
 			strcpy(comando, obtenerComando(buffer));
 			strcpy(argumento, obtenerParametro(buffer));
 		}
+		
+		command_handler(vector_comandos, comando, argumento, datos_cliente);
 
-
-
+		SetEvent(datos_cliente->evento2);
+		WaitForSingleObject(hThreadDatos, INFINITE);
 		CloseHandle(hThreadDatos);
 		printLog("Thread Cmd", "1", threadID[datos_cliente->socket_comando], "INFO", "Desconexion al Thread de Datos");
 		send(datos_cliente->socket_comando,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
@@ -145,7 +154,6 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 int main(){ 
     SOCKET descriptor, socketAux;
 	HANDLE hThread[CANTIDAD_CLIENTES];
-	reg_cliente datos_cliente[CANTIDAD_CLIENTES];
 	reg_cliente *reg_aux;
 	int a, addrlen = sizeof(struct sockaddr_in);
 	unsigned i;
@@ -177,9 +185,7 @@ int main(){
 	
 	while(1){
 		if((socketAux = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
-			datos_cliente[socketAux].socket_comando=socketAux;
-			reg_aux->socket_comando=socketAux;
-			hThread[socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) reg_aux, 0, &threadID[socketAux]);
+			hThread[socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) socketAux, 0, &threadID[socketAux]);
 			printLog("New Client","0",threadID[socketAux],"INFO","Conexion Nuevo cliente al puerto ftp");
 
 		}
