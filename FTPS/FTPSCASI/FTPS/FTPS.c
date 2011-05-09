@@ -53,7 +53,7 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 		local_address->sin_port = htons (puerto);
 		descriptorD= socket(AF_INET, SOCK_STREAM, 0);
 		puerto++;
-	} while((bind (descriptorD,(struct sockaddr *) local_address, addrlen)) != SOCKET_ERROR);
+	} while((bind (descriptorD,(struct sockaddr *) local_address, addrlen)) == SOCKET_ERROR);
 	
 	datos_cliente->puerto_datos= puerto-1;
 
@@ -108,6 +108,7 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	//int (*puntero)(char*, reg_cliente*);
 
 	datos_cliente->evento1 = CreateEvent(NULL, FALSE, FALSE, NULL);
+	datos_cliente->evento2 = CreateEvent(NULL, FALSE, FALSE, NULL);
 	
 	send(datos_cliente->socket_comando,"220 POWER\r\n", strlen("220 POWER\r\n"),0);
     corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
@@ -154,7 +155,6 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 int main(){ 
     SOCKET descriptor, socketAux;
 	HANDLE hThread[CANTIDAD_CLIENTES];
-	reg_cliente *reg_aux;
 	int a, addrlen = sizeof(struct sockaddr_in);
 	unsigned i;
 	struct sockaddr_in *local_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
@@ -162,7 +162,6 @@ int main(){
 	
 	printLog("Main FTPS","0","0","INFO","Archivo de Configuracion");
 	paraElMain(vector_comandos);
-	reg_aux = (reg_cliente *) HeapAlloc(GetProcessHeap(), 0, sizeof(reg_cliente));
 	
 
 	if ((a = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
