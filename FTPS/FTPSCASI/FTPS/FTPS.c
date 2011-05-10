@@ -55,6 +55,8 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 		puerto++;
 	} while((bind (descriptorD,(struct sockaddr *) local_address, addrlen)) == SOCKET_ERROR); // intento bindear algun puerto
 	
+	printf("bindeo exitoso!!\n");
+
 	datos_cliente->puerto_datos= puerto-1;
 
 	listen(descriptorD,100);
@@ -66,10 +68,12 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	
 	WaitForSingleObject(datos_cliente->evento2, INFINITE); // espero que el thread de comandos me diga que ya puedo mandar o recibir
 		
-
+	printf("soy el Thread de datos y voy a analizar..\n");
 	switch(datos_cliente->envio_o_recibo){
 		case 'E':
-			send (clienteDatos, datos_cliente->buffer, strlen(datos_cliente->buffer), 0);
+			printf("voy a mandar..\n");
+			send (clienteDatos, datos_cliente->buffer, strlen(datos_cliente->buffer), 0);	
+			printf("mande..\n");
 			break;
 		case 'R':
 			recv (clienteDatos, datos_cliente->buffer, SOCKET_MAX_BUFFER, 0);
@@ -139,22 +143,23 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		//printLog("Thread Cmd","1",threadID[datos_cliente->socket_comando],"INFO","Conexion al Thread de Datos");
 		hThreadDatos = (HANDLE) _beginthreadex(NULL,0, &threadDeDatos, (void*) datos_cliente, 0, NULL);
 	    WaitForSingleObject(datos_cliente->evento1,INFINITE);
-		command_handler(vector_comandos, comando, argumento, datos_cliente);  // ejecuto PASV
+		command_handler(vector_comandos, comando, argumento, datos_cliente);  // ejecuto PASV : mando puerto y demas,,
 		corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
 		buffer[corrector]='\0';
 		strcpy(comando, obtenerComando(buffer));
 		strcpy(argumento, obtenerParametro(buffer));
-		
-		while ( strcmp(comando,"STOR\r\n") && strcmp(comando, "RETR\r\n") && strcmp(comando, "LIST\r\n") && strcmp(comando, "DELE\r\n") ){ //espero uno de estos comandos
-			printf(" sera el list? " );
+
+		while ( strcmp(comando,"STOR") && strcmp(comando, "RETR") && strcmp(comando, "LIST\r\n") && strcmp(comando, "DELE") ){ //espero uno de estos comandos
+			printf(" no es retr, stor, list ni dele \n" );
 			command_handler(vector_comandos, comando, argumento, datos_cliente);
 			corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
 			buffer[corrector]='\0';
 			strcpy(comando, obtenerComando(buffer));
 			strcpy(argumento, obtenerParametro(buffer));
-			
+			printf("el comando en el while es %s y su largo es %d\n",comando,strlen(comando));
 		}
 		
+		printf("voy a responder a LIST RETR STOR DELE\n" );
 		command_handler(vector_comandos, comando, argumento, datos_cliente); // mando el list o retr o stor o dele
 
 		SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir

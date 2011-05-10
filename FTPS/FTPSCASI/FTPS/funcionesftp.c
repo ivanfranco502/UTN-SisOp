@@ -111,6 +111,7 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcat(Response, "(63805 bytes)");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	printf(Response);
 	return 0;
 }
 
