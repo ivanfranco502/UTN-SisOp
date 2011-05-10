@@ -22,11 +22,12 @@ int rta_PWD  (char *, char *, reg_cliente *);
 int rta_HELP (char *, char *, reg_cliente *);
 int rta_RETR (char *, char *, reg_cliente *);
 int rta_STOR (char *, char *, reg_cliente *);
+int rta_USER (char *, char *, reg_cliente *);
 
 
 int rta_PASV (char *Response, char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "227 Entering Passive Mode");
-	strcat(Response, obtenerParametrosParaPASV(IP, datos_cliente->puerto_datos));
+	strcat(Response, obtenerParametrosParaPASV("192.168.140129", datos_cliente->puerto_datos));
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 }
@@ -47,10 +48,10 @@ int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
 int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "200 Type set to ");
 	strcat(Response, arg);
-	if (strcmpi(arg, "A") == 0){
-		strcpy(datos_cliente->type, "ASCII");
-	}else if (strcmpi(arg, "I") == 0){
-		strcpy(datos_cliente->type, "BINARY");
+	if((strncmp(arg,"A",1))==0){
+		strcpy(datos_cliente->type,"ASCII");
+	}else if((strncmp(arg,"I",1))==0){
+		strcpy(datos_cliente->type,"BINARY");
 	}
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -108,6 +109,13 @@ int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 }
+
+int rta_USER (char *Response, char *arg,reg_cliente *datos_cliente){
+	strcpy(Response, "230 Usuario anonimo logueado");
+	strcat(Response, "\r\n");
+	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+}
+
 
 char *obtenerComando(char *comando){
 	int n, 
@@ -202,18 +210,19 @@ char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 int command_handler(t_command_handler *vector_comandos,char *comando, char *argumento,reg_cliente* datos_cliente){
 
 	int i=0;
-	char Response[100];
+	char Response[100]="";
 
-       	while (strcmp(vector_comandos[i].mensaje,comando)&&(i<10)){
+	while (strncmp(vector_comandos[i].mensaje,comando,3)&&(i<11)){
+		printf("%d\n",i);
 		i++;
 	}
 
-	if (i==10){
+	if (i==11){
 		strcpy(Response, "500 command not support\r\n");
-	}
-	else{
+		send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	}else
 		(*(vector_comandos[i].pfunc)) (Response, argumento, datos_cliente);
-	}
+	
 
 }
 int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *tipoLog, char *dato){
@@ -289,4 +298,6 @@ void paraElMain(t_command_handler * vector_comandos){
 	strcpy(vector_comandos[8].mensaje,"RETR");
 	vector_comandos[9].pfunc=&rta_STOR;
 	strcpy(vector_comandos[9].mensaje,"STOR");
+	vector_comandos[10].pfunc=&rta_USER;
+	strcpy(vector_comandos[10].mensaje,"USER");
 }
