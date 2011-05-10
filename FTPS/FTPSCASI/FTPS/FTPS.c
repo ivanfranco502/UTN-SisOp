@@ -45,6 +45,7 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	reg_cliente *datos_cliente  = HeapAlloc(heapDatos, HEAP_NO_SERIALIZE, sizeof(reg_cliente));
 	datos_cliente = (reg_cliente*) pArguments;
 	
+
     local_address->sin_family = AF_INET;
 	local_address->sin_addr.s_addr=INADDR_ANY;
 	
@@ -52,18 +53,18 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 		local_address->sin_port = htons (puerto);
 		descriptorD= socket(AF_INET, SOCK_STREAM, 0);
 		puerto++;
-	} while((bind (descriptorD,(struct sockaddr *) local_address, addrlen)) == SOCKET_ERROR);
+	} while((bind (descriptorD,(struct sockaddr *) local_address, addrlen)) == SOCKET_ERROR); // intento bindear algun puerto
 	
 	datos_cliente->puerto_datos= puerto-1;
 
 	listen(descriptorD,100);
 
 	SetEvent(datos_cliente->evento1);
-	
+	printf("me pongo a aceptar el 5300");	
 	printf("%d\n", clienteDatos = accept(descriptorD, (struct sockaddr *)remote_address, (void*)&addrlen));
-
+	printf("acepte!!\n");
 	
-	WaitForSingleObject(datos_cliente->evento2, INFINITE);
+	WaitForSingleObject(datos_cliente->evento2, INFINITE); // espero que el thread de comandos me diga que ya puedo mandar o recibir
 		
 
 	switch(datos_cliente->envio_o_recibo){
@@ -77,8 +78,13 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 			;//hacer nada
 	}
 			
+
+			
 	// DECIRLE AL DE COMANDOS QUE MANDE EL 226
 
+		
+			
+	
 	closesocket(clienteDatos);
 	closesocket(descriptorD);
     _endthreadex( 0 );
@@ -98,7 +104,6 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	aux = (SOCKET*) pArguments;
 	datos_cliente->socket_comando = *aux;
 	strcpy(datos_cliente->current_path, "/");
-	datos_cliente->puerto_datos = 5300; // Le seteo el puerto al cliente para PASV
 	
 	//HeapFree(heap, HEAP_NO_SERIALIZE, aux);
 	
@@ -112,14 +117,16 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	send(datos_cliente->socket_comando,"220 POWER\r\n", strlen("220 POWER\r\n"),0);
     corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
     buffer[corrector]='\0';
+	
+	
 
 	strcpy(comando, obtenerComando(buffer));
 	strcpy(argumento, obtenerParametro(buffer));
 	printf("%s ", comando);
 	printf("%s", argumento);
 	
-	while( (strcmp(comando, "bye")) && (strcmp(comando, "quit")) && (strcmp(comando, "exit")) ){
-		while (strcmp(comando,"PASV")){
+	while( (strcmp(comando, "bye")) && (strcmp(comando, "quit")) && (strcmp(comando, "exit")) ){  // espero que cierre sesion
+		while (strcmp(comando,"PASV\r\n")){  // espero por pasv
 			command_handler(vector_comandos, comando, argumento, datos_cliente);
 			corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
 			buffer[corrector]='\0';
@@ -129,25 +136,36 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 			printf("%s\n", argumento);
 		}
 		printf("llego aca");
-		printLog("Thread Cmd","1",threadID[datos_cliente->socket_comando],"INFO","Conexion al Thread de Datos");
+		//printLog("Thread Cmd","1",threadID[datos_cliente->socket_comando],"INFO","Conexion al Thread de Datos");
 		hThreadDatos = (HANDLE) _beginthreadex(NULL,0, &threadDeDatos, (void*) datos_cliente, 0, NULL);
 	    WaitForSingleObject(datos_cliente->evento1,INFINITE);
+		command_handler(vector_comandos, comando, argumento, datos_cliente);  // ejecuto PASV
+		corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
+		buffer[corrector]='\0';
+		strcpy(comando, obtenerComando(buffer));
+		strcpy(argumento, obtenerParametro(buffer));
 		
-		while ( strcmp(comando,"STOR") && strcmp(comando, "RETR") && strcmp(comando, "LIST") && strcmp(comando, "DELE") ){
+		while ( strcmp(comando,"STOR\r\n") && strcmp(comando, "RETR\r\n") && strcmp(comando, "LIST\r\n") && strcmp(comando, "DELE\r\n") ){ //espero uno de estos comandos
+			printf(" sera el list? " );
 			command_handler(vector_comandos, comando, argumento, datos_cliente);
 			corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
 			buffer[corrector]='\0';
 			strcpy(comando, obtenerComando(buffer));
 			strcpy(argumento, obtenerParametro(buffer));
+			
 		}
 		
-		command_handler(vector_comandos, comando, argumento, datos_cliente);
+		command_handler(vector_comandos, comando, argumento, datos_cliente); // mando el list o retr o stor o dele
 
-		SetEvent(datos_cliente->evento2);
-		WaitForSingleObject(hThreadDatos, INFINITE);
+		SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
+		WaitForSingleObject(hThreadDatos, INFINITE); // espero que termine el thread de datos
 		CloseHandle(hThreadDatos);
-		printLog("Thread Cmd", "1", threadID[datos_cliente->socket_comando], "INFO", "Desconexion al Thread de Datos");
+		//printLog("Thread Cmd", "1", threadID[datos_cliente->socket_comando], "INFO", "Desconexion al Thread de Datos");
 		send(datos_cliente->socket_comando,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
+		corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
+		buffer[corrector]='\0';
+		strcpy(comando, obtenerComando(buffer));
+		strcpy(argumento, obtenerParametro(buffer));
 	}
 
 	HeapDestroy(heap);
@@ -169,7 +187,7 @@ int main(){
 	socketAux = HeapAlloc(GetProcessHeap(),HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	
 
-	printLog("Main FTPS","0",0,"INFO","Archivo de Configuracion");
+	//printLog("Main FTPS","0",0,"INFO","Archivo de Configuracion");
 	
 	
 
@@ -199,13 +217,13 @@ int main(){
 		if((*socketAux = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
 			hThread[*socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) socketAux, 0, &threadID[*socketAux]);
 			//printf("%d", *socketAux);
-//			printLog("New Client","0",threadID[socketAux],"INFO","Conexion Nuevo cliente al puerto ftp");
+			//printLog("New Client","0",threadID[socketAux],"INFO","Conexion Nuevo cliente al puerto ftp");
 
 		}
 
 		for (i=0; i<CANTIDAD_CLIENTES;i++){
 			if (threadsFinalizados[i]){
-				printLog("Disconnect client","0",threadID[i], "INFO", "Desconexion cliente al puerto ftp");
+				//printLog("Disconnect client","0",threadID[i], "INFO", "Desconexion cliente al puerto ftp");
 				closesocket(i);
 				CloseHandle(hThread[i]);
 				threadsFinalizados[i]=0;
