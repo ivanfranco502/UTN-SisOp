@@ -27,15 +27,17 @@ int rta_USER (char *, char *, reg_cliente *);
 
 int rta_PASV (char *Response, char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "227 Entering Passive Mode");
-	strcat(Response, obtenerParametrosParaPASV("192.168.1.108", datos_cliente->puerto_datos));
+	strcat(Response, obtenerParametrosParaPASV("192.168.153.128", datos_cliente->puerto_datos));
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_NOOP (char *Response, char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "200 NOOP command successful");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
@@ -43,6 +45,7 @@ int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "250 DELE command successful");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
@@ -53,7 +56,12 @@ int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
 	}else if((strncmp(arg,"I",1))==0){
 		strcpy(datos_cliente->type,"BINARY");
 	}
-	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	strcat(Response, "\r\n");
+
+	printf(" voy a enviar \n" );
+	send(datos_cliente->socket_comando, "200 TYPE set to A\r\n" , strlen("200 TYPE set to A\r\n"),0);
+	printf(" mande\n" );
+	return 0;
 }
 
 int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
@@ -64,7 +72,9 @@ int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcat(Response, datos_cliente->type);
 	strcat(Response, " mode data connection for file list");
 	strcat(Response, "\r\n");
+	printf(" la respuesta que mando es : %s \n" ,Response);
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_CWD (char *Response,char *arg,reg_cliente *datos_cliente){
@@ -72,6 +82,7 @@ int rta_CWD (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(datos_cliente->current_path, arg);
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_PWD (char *Response,char *arg,reg_cliente *datos_cliente){
@@ -80,16 +91,19 @@ int rta_PWD (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcat(Response, "\" is the current directory");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_HELP (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(Response,"Commands are:\nUSER\nPWD\nTYPE\nPASV\nLIST\nNOOP\nRETR\nSTOR\nCWD\nDELE\nHELP");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	datos_cliente->envio_o_recibo='E';
+	strcpy(datos_cliente->buffer,"caca caca");
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
 	strcat(Response, " mode data connection for ");
@@ -97,6 +111,7 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcat(Response, "(63805 bytes)");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
@@ -107,12 +122,14 @@ int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
 	strcat(Response, arg);
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 int rta_USER (char *Response, char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "230 Usuario anonimo logueado");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	return 0;
 }
 
 
@@ -139,37 +156,36 @@ char *obtenerComando(char *comando){
 	comandoObtenido[aux] = '\0';
 	return (comandoObtenido);
 }
-
 char *obtenerParametro(char *comando){
-	int n, 
-		pasoComando,
-		aux;
-	char parametro[30];
-	
-	n = 0;
-	pasoComando = 0;
-	aux = 0;
-	
-	while (comando[n] != '\0'){
-		if (comando[n] == ' '){
-			pasoComando = 1;
-		}
-		if (pasoComando) {
-			if(comando[n] != ' '){
-				parametro[aux]= comando[n];
-				aux++;
-			}
-		}
-		n++;
-	}
-	parametro[aux] = '\0';
+ int n, 
+  pasoComando,
+  aux;
+ char parametro[30];
+ 
+ n = 0;
+ pasoComando = 0;
+ aux = 0;
+ 
+ while (comando[n] != '\0'){
+  if (comando[n] == ' '){
+   pasoComando = 1;
+  }
+  if (pasoComando) {
+   if((comando[n] != ' ') && (comando[n] != '\r') && (comando[n] != '\n')){
+    parametro[aux]= comando[n];
+    aux++;
+   }
+  }
+  n++;
+ }
+ parametro[aux] = '\0';
 
-	return (parametro);
+ return (parametro);
 }
 
 char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 	char parametrosPASV[26],
-		 ipModificada[15],
+		 ipModificada[18],
 		 puertoAux[4];
 	int puertoDiv,
 		puertoRes,
@@ -182,11 +198,12 @@ char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 		if (IP[indice] == '.'){
 			ipModificada[indice] = ',';
 		}else{
+			
 			ipModificada[indice] = IP[indice];
 		}
 		indice++;
 	}
-	ipModificada[indice] = '\0';
+/*	ipModificada[indice] = '\0';
 	strcat(parametrosPASV, ipModificada);
 	strcat(parametrosPASV, ",");
 
@@ -200,8 +217,8 @@ char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 	sprintf(puertoAux, "%d", puertoRes);
 	strcat(parametrosPASV, puertoAux);
 	strcat(parametrosPASV, ").");
-
-	return (parametrosPASV);
+*/
+	return ("(192,168,153,128,20,180)");
 }
 
 //handler de comandos  recibe el vector de registros (funciones y comandos) el puntero al registro del cliente, el comando y el argumento
@@ -227,15 +244,26 @@ int command_handler(t_command_handler *vector_comandos,char *comando, char *argu
 int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *tipoLog, char *dato){
 	int bytesTransferidos,
 		n;
-	char log[100],
-		 fecha[13],
-		 tID[6];
+	char log[100];
+	char fecha[13];
+	char tID[6];
+	char aux;
+	int i =0;
+	int j, k;
 	SYSTEMTIME  st;
 	HANDLE out = CreateFileA("ntvc.log", GENERIC_WRITE, 0, NULL, 4, FILE_ATTRIBUTE_NORMAL, NULL);
 	GetLocalTime(&st);
 	sprintf(fecha,"%d:%d:%d.%d", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 	
-	sprintf(tID,"%d", threadID);
+	do{
+		tID[i++]= threadID % 10 + '0';
+	}while((threadID/=10)>0);
+	tID[i] = '\0';
+	for(j = 0, k = i-1; j < k; j++, k--){
+		aux = tID[j];
+		tID[j] = tID[k];
+		tID[k]=aux;
+	}
 
 	bytesTransferidos = 0;
 
@@ -246,7 +274,7 @@ int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *ti
 	strcat(log, "][");
 	strcat(log, pIDProceso);
 	strcat(log, "][");
-	strcat(log, tID);
+	strcat(log, threadID);
 	strcat(log, "][");
 	strcat(log, tipoLog);
 	strcat(log, "][");
@@ -269,7 +297,7 @@ void paraElMain(t_command_handler * vector_comandos){
 	vector_comandos[0].pfunc=&rta_PASV;
 	strcpy(vector_comandos[0].mensaje,"PASV");
 	vector_comandos[1].pfunc=&rta_NOOP;
-	strcpy(vector_comandos[1].mensaje,"NOOP");
+	strcpy(vector_comandos[1].mensaje,"noop");
 	vector_comandos[2].pfunc=&rta_DELE;
 	strcpy(vector_comandos[2].mensaje,"DELE");
 	vector_comandos[3].pfunc=&rta_TYPE;
