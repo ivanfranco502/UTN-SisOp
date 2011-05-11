@@ -27,7 +27,7 @@ int rta_USER (char *, char *, reg_cliente *);
 
 int rta_PASV (char *Response, char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "227 Entering Passive Mode");
-	strcat(Response, obtenerParametrosParaPASV("192.168.140.129", datos_cliente->puerto_datos));
+	strcat(Response, obtenerParametrosParaPASV("192.168.1.108", datos_cliente->puerto_datos));
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
@@ -148,7 +148,7 @@ char *obtenerComando(char *comando){
 		if (comando[n] == ' '){
 			pasoComando = 1;
 		}
-		if (!pasoComando) {
+		if ((!pasoComando) && (comando[n] != '\r') && (comando[n] != '\n')) {
 			comandoObtenido[aux]= comando[n];
 			aux++;
 		}
@@ -168,11 +168,11 @@ char *obtenerParametro(char *comando){
  aux = 0;
  
  while (comando[n] != '\0'){
-  if (comando[n] == ' '){
+  if ((comando[n] == ' ') || (comando[n] == '\r')){
    pasoComando = 1;
   }
   if (pasoComando) {
-   if((comando[n] != ' ') && (comando[n] != '\r') && (comando[n] != '\n')){
+   if(comando[n] != ' '){
     parametro[aux]= comando[n];
     aux++;
    }
@@ -245,26 +245,15 @@ int command_handler(t_command_handler *vector_comandos,char *comando, char *argu
 int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *tipoLog, char *dato){
 	int bytesTransferidos,
 		n;
-	char log[100];
-	char fecha[13];
-	char tID[6];
-	char aux;
-	int i =0;
-	int j, k;
+	char log[100],
+		 fecha[13],
+		 tID[6];
 	SYSTEMTIME  st;
 	HANDLE out = CreateFileA("ntvc.log", GENERIC_WRITE, 0, NULL, 4, FILE_ATTRIBUTE_NORMAL, NULL);
 	GetLocalTime(&st);
 	sprintf(fecha,"%d:%d:%d.%d", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-	
-	do{
-		tID[i++]= threadID % 10 + '0';
-	}while((threadID/=10)>0);
-	tID[i] = '\0';
-	for(j = 0, k = i-1; j < k; j++, k--){
-		aux = tID[j];
-		tID[j] = tID[k];
-		tID[k]=aux;
-	}
+
+	sprintf(tID, "%d", threadID);
 
 	bytesTransferidos = 0;
 
@@ -275,7 +264,7 @@ int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *ti
 	strcat(log, "][");
 	strcat(log, pIDProceso);
 	strcat(log, "][");
-	strcat(log, threadID);
+	strcat(log, tID);
 	strcat(log, "][");
 	strcat(log, tipoLog);
 	strcat(log, "][");
