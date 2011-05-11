@@ -27,7 +27,7 @@ int rta_USER (char *, char *, reg_cliente *);
 
 int rta_PASV (char *Response, char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "227 Entering Passive Mode");
-	strcat(Response, obtenerParametrosParaPASV("192.168.153.128", datos_cliente->puerto_datos));
+	strcat(Response, obtenerParametrosParaPASV("192.168.140.129", datos_cliente->puerto_datos));
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
@@ -204,7 +204,7 @@ char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 		}
 		indice++;
 	}
-/*	ipModificada[indice] = '\0';
+	ipModificada[indice] = '\0';
 	strcat(parametrosPASV, ipModificada);
 	strcat(parametrosPASV, ",");
 
@@ -218,8 +218,8 @@ char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 	sprintf(puertoAux, "%d", puertoRes);
 	strcat(parametrosPASV, puertoAux);
 	strcat(parametrosPASV, ").");
-*/
-	return ("(192,168,153,128,20,180)");
+
+	return (parametrosPASV);
 }
 
 //handler de comandos  recibe el vector de registros (funciones y comandos) el puntero al registro del cliente, el comando y el argumento
