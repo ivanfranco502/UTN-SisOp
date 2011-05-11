@@ -125,7 +125,7 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	printf("%s", argumento);
 	
 	while( corrector != SOCKET_ERROR ){  // espero que cierre sesion
-		while (strcmp(comando,"PASV\r\n")&&(corrector!= SOCKET_ERROR)){  // espero por pasv
+		while (strcmp(comando,"PASV")&&(corrector!= SOCKET_ERROR)){  // espero por pasv
 			command_handler(vector_comandos, comando, argumento, datos_cliente);
 			corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
 			buffer[corrector]='\0';
@@ -143,7 +143,7 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		strcpy(comando, obtenerComando(buffer));
 		strcpy(argumento, obtenerParametro(buffer));
 
-		while ( strcmp(comando,"STOR") && strcmp(comando, "RETR") && strcmp(comando, "LIST\r\n") && strcmp(comando, "DELE") &&(corrector!= SOCKET_ERROR)){ //espero uno de estos comandos
+		while ( strcmp(comando,"STOR") && strcmp(comando, "RETR") && strcmp(comando, "LIST") && strcmp(comando, "DELE") &&(corrector!= SOCKET_ERROR)){ //espero uno de estos comandos
 			printf(" no es retr, stor, list ni dele \n" );
 			command_handler(vector_comandos, comando, argumento, datos_cliente);
 			corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
