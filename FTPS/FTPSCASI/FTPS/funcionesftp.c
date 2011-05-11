@@ -188,9 +188,9 @@ char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 	char parametrosPASV[26],
 		 ipModificada[18],
 		 puertoAux[4];
-	int puertoDiv,
-		puertoRes,
-		indice;
+	unsigned puertoDiv,
+			 puertoRes;
+	int indice;
 
 	//transforma el numero de IP XXX.XXX.XXX.XXX en XXX,XXX,XXX,XXX
 	strcpy(parametrosPASV,"(");
@@ -209,7 +209,7 @@ char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
 	strcat(parametrosPASV, ",");
 
 	//transforrma el puerto XXXXX en YYY*256+ZZZ= XXXXX
-	puertoDiv = abs(puerto/256);
+	puertoDiv = puerto/256;
 	puertoRes = puerto - (puertoDiv*256);
 
 	sprintf(puertoAux, "%d", puertoDiv);
@@ -229,7 +229,7 @@ int command_handler(t_command_handler *vector_comandos,char *comando, char *argu
 	int i=0;
 	char Response[100]="";
 
-	while (strncmp(vector_comandos[i].mensaje,comando,3)&&(i<11)){
+	while (strcmp(vector_comandos[i].mensaje,comando)&&(i<11)){
 		printf("%d\n",i);
 		i++;
 	}
