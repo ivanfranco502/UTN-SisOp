@@ -24,7 +24,7 @@ t_command_handler vector_comandos[11];
 
 void inicializarVectorDeThreads(){
 	// Inicializa en cero threadsFinalizados[]
-	int i=0;
+	unsigned i=0;
 	for (i; i<CANTIDAD_CLIENTES; i++)
 		threadsFinalizados[i]=0;
 }
@@ -129,8 +129,8 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	printf("%s ", comando);
 	printf("%s", argumento);
 	
-	while( (strcmp(comando, "bye")) && (strcmp(comando, "quit")) && (strcmp(comando, "exit")) ){  // espero que cierre sesion
-		while (strcmp(comando,"PASV\r\n")){  // espero por pasv
+	while( corrector != SOCKET_ERROR ){  // espero que cierre sesion
+		while (strcmp(comando,"PASV\r\n")&&(corrector!= SOCKET_ERROR)){  // espero por pasv
 			command_handler(vector_comandos, comando, argumento, datos_cliente);
 			corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
 			buffer[corrector]='\0';
@@ -149,7 +149,7 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		strcpy(comando, obtenerComando(buffer));
 		strcpy(argumento, obtenerParametro(buffer));
 
-		while ( strcmp(comando,"STOR") && strcmp(comando, "RETR") && strcmp(comando, "LIST\r\n") && strcmp(comando, "DELE") ){ //espero uno de estos comandos
+		while ( strcmp(comando,"STOR") && strcmp(comando, "RETR") && strcmp(comando, "LIST\r\n") && strcmp(comando, "DELE") &&(corrector!= SOCKET_ERROR)){ //espero uno de estos comandos
 			printf(" no es retr, stor, list ni dele \n" );
 			command_handler(vector_comandos, comando, argumento, datos_cliente);
 			corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
@@ -172,10 +172,11 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		strcpy(comando, obtenerComando(buffer));
 		strcpy(argumento, obtenerParametro(buffer));
 	}
-
-	HeapDestroy(heap);
-	threadsFinalizados[datos_cliente->socket_comando]=1;
-    _endthreadex( 0 );
+	CloseHandle(datos_cliente->evento1);
+	CloseHandle(datos_cliente->evento2);
+	threadsFinalizados[datos_cliente->socket_comando] = 1;
+    HeapDestroy(heap);
+	_endthreadex( 0 );
     
 } 
 
@@ -222,7 +223,7 @@ int main(){
 		if((*socketAux = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
 			hThread[*socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) socketAux, 0, &threadID[*socketAux]);
 			//printf("%d", *socketAux);
-			//printLog("New Client","0",threadID[socketAux],"INFO","Conexion Nuevo cliente al puerto ftp");
+			//printLog("New Client","0",threadID[*socketAux],"INFO","Conexion Nuevo cliente al puerto ftp");
 
 		}
 
