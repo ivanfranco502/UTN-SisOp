@@ -1,4 +1,4 @@
-#define SOCKET_MAX_BUFFER 1000
+#define SOCKET_MAX_BUFFER 5000
 
 typedef struct  {
 
@@ -8,9 +8,11 @@ typedef struct  {
 				SOCKET socket_comando;
 				char envio_o_recibo;
 				char buffer[SOCKET_MAX_BUFFER];
+				unsigned threadID;
+				HANDLE hThreadDatos;
 				HANDLE evento1;
 				HANDLE evento2;
-                } reg_cliente;
+				} reg_cliente;
 
 typedef struct 	{
 		
