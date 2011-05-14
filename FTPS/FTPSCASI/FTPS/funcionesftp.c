@@ -28,7 +28,7 @@ int rta_USER (char *, char *, reg_cliente *);
 
 unsigned __stdcall threadDeDatos( void* pArguments ){
     // Thread de datos
-
+	
 	HANDLE  heapDatos = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
 	SOCKET descriptorD;
 	SOCKET clienteDatos;
@@ -57,8 +57,8 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	listen(descriptorD,100);
 
 	SetEvent(datos_cliente->evento1);
-	printf("me pongo a aceptar el 5300");	
-	printf("%d\n", clienteDatos = accept(descriptorD, (struct sockaddr *)remote_address, (void*)&addrlen));
+	printf("me pongo a aceptar el 5300\n");	
+	printf("nuevo cliente descriptor: %d\n", clienteDatos = accept(descriptorD, (struct sockaddr *)remote_address, (void*)&addrlen));
 	printf("acepte!!\n");
 	
 	WaitForSingleObject(datos_cliente->evento2, INFINITE); // espero que el thread de comandos me diga que ya puedo mandar o recibir
@@ -71,9 +71,14 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 			printf("mande..\n");
 			break;
 		case 'R':
-			/*cantidadBytes=recv (clienteDatos, datos_cliente->buffer, SOCKET_MAX_BUFFER, 0);
-			while(cantidadBytes==SOCKET_MAX_BUFFER)
-				cantidadBytes=recv(clienteDatos, datos_cliente->buffer, SOCKET_MAX_BUFFER, 0);*/
+			printf("voy a recibir de: %d\n",clienteDatos );
+	
+//			send(datos_cliente->socket_comando, "150 Opening BINARY mode" , strlen("150 Opening BINARY mode"),0);
+			cantidadBytes=recv (clienteDatos, datos_cliente->buffer, SOCKET_MAX_BUFFER, 0);
+			datos_cliente->buffer[cantidadBytes]='\0' ;
+			printf("llego: %s \n",datos_cliente->buffer);
+			//while(cantidadBytes==SOCKET_MAX_BUFFER)
+			//	cantidadBytes=recv(clienteDatos, datos_cliente->buffer, SOCKET_MAX_BUFFER, 0);*/
 			printf("paso el recv");
 			break;
 		default:
@@ -92,9 +97,10 @@ int rta_PASV (char *Response, char *arg,reg_cliente *datos_cliente){
 	datos_cliente->hThreadDatos = (HANDLE) _beginthreadex(NULL,0, &threadDeDatos, (void*) datos_cliente, 0, NULL);
 	WaitForSingleObject(datos_cliente->evento1,INFINITE);
 	strcpy(Response, "227 Entering Passive Mode");
-	strcat(Response, obtenerParametrosParaPASV("192.168.140.129", datos_cliente->puerto_datos));
+	strcat(Response, obtenerParametrosParaPASV("192.168.153.128", datos_cliente->puerto_datos));
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+	printf(" al cliente le mande : %s \n", Response);
 	return 0;
 }
 
@@ -115,16 +121,17 @@ int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
 int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "200 Type set to ");
 	strcat(Response, arg);
+	printf("%d\n",strlen(arg));
 	if((strncmp(arg,"A",1))==0){
 		strcpy(datos_cliente->type,"ASCII");
 	}else if((strncmp(arg,"I",1))==0){
 		strcpy(datos_cliente->type,"BINARY");
 	}
-	strcat(Response, "\r\n");
+//	strcat(Response, "\r\n"); esta linea hija de puta cagaba todo!! ya venia el arg con \r\n
 
 	printf(" voy a enviar \n" );
-	send(datos_cliente->socket_comando, "200 TYPE set to A\r\n" , strlen("200 TYPE set to A\r\n"),0);
-	printf(" mande\n" );
+	send(datos_cliente->socket_comando, Response , strlen("200 Type set to A\r\n"),0);
+	printf(" mande: %s",Response );
 	return 0;
 }
 
@@ -155,7 +162,7 @@ int rta_CWD (char *Response,char *arg,reg_cliente *datos_cliente){
 
 int rta_PWD (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "257 \"");
-	strcat(Response, datos_cliente->current_path);
+	strcat(Response, datos_cliente->current_path); 
 	strcat(Response, "\" is the current directory");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -176,7 +183,7 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcat(Response, datos_cliente->type);
 	strcat(Response, " mode data connection for ");
 	strcat(Response, arg);
-	strcat(Response, "(63805 bytes)");
+//	strcat(Response, "(63805 bytes)");  comente por filezilla,, no se que onda agregara un \n al arg?
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	printf(Response);
@@ -189,13 +196,17 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 
 int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
 	datos_cliente->envio_o_recibo='R';
+//	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
 	strcat(Response, "mode data connection for ");
 	strcat(Response, arg);
-	strcat(Response, "\r\n");
-	send(datos_cliente->socket_comando, Response, strlen(Response),0);
+//	strcat(Response, "\r\n");	otra linea de mierda que caga todo?!?!?! SII era esta tambien
+//	send(datos_cliente->socket_comando, Response, strlen(Response),0); 
 	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
+	 
+	printf(" mandame cliente de mierda!! \n" );
+	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	WaitForSingleObject(datos_cliente->hThreadDatos, INFINITE); // espero que termine el thread de datos
 	printf("volvi del thread datos stor");
 	CloseHandle(datos_cliente->hThreadDatos);
