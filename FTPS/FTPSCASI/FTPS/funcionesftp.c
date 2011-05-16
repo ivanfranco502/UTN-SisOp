@@ -34,7 +34,9 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	SOCKET clienteDatos;
 	int addrlen = sizeof(struct sockaddr_in);
 	int cantidadBytes;
-	unsigned puerto = 5300;
+	unsigned puerto = 1025;
+	char IP[16];
+	char port[6];
 	struct sockaddr_in *local_address = HeapAlloc(heapDatos, 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(heapDatos, 0, addrlen);
 	reg_cliente *datos_cliente  = HeapAlloc(heapDatos, HEAP_NO_SERIALIZE, sizeof(reg_cliente));
@@ -43,6 +45,10 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	printLog("Thread Datos","2",datos_cliente->threadID,"INFO","Conexion al Thread de Datos");
     local_address->sin_family = AF_INET;
 	local_address->sin_addr.s_addr=INADDR_ANY;
+
+	getConfig(IP, port);
+
+	sscanf(port, "%d", &puerto);
 	
 	do{
 		local_address->sin_port = htons (puerto);
@@ -53,6 +59,7 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	printf("bindeo exitoso!!\n");
 
 	datos_cliente->puerto_datos= puerto-1;
+	strcpy(datos_cliente->IP, IP);
 
 	listen(descriptorD,100);
 
@@ -97,7 +104,7 @@ int rta_PASV (char *Response, char *arg,reg_cliente *datos_cliente){
 	datos_cliente->hThreadDatos = (HANDLE) _beginthreadex(NULL,0, &threadDeDatos, (void*) datos_cliente, 0, NULL);
 	WaitForSingleObject(datos_cliente->evento1,INFINITE);
 	strcpy(Response, "227 Entering Passive Mode");
-	strcat(Response, obtenerParametrosParaPASV("192.168.153.128", datos_cliente->puerto_datos));
+	strcat(Response, obtenerParametrosParaPASV(datos_cliente->IP, datos_cliente->puerto_datos));
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	printf(" al cliente le mande : %s \n", Response);
@@ -221,6 +228,68 @@ int rta_USER (char *Response, char *arg,reg_cliente *datos_cliente){
 	return 0;
 }
 
+char *dameIP (char *buff) {
+	char IP[16];
+	int i=0;
+	
+	while (buff[i] != ':'){
+		IP[i]=buff[i];
+		i++;
+	}
+	IP[i]='\0';
+	return IP;
+}
+
+
+char *damePuerto(char *buff){
+	char PORT[6];
+	int i=0;
+	int j=0;
+
+	while (buff[i] != ':'){
+		i++;
+	}
+	while (buff[i] != '\0'){
+		if(buff[i] != ':'){
+			PORT[j]=buff[i];
+			j++;
+		}
+		i++;
+	}
+	PORT[j]='\0';
+	return PORT;
+}
+
+int getConfig (char *IP, char *PORT){
+	HANDLE *archivo;
+	DWORD bytesLeidos;
+	LPCSTR nombreArchivo = "ftp.config";
+	char buffer[100];
+	int lectura;
+
+	//apertura archivo
+	archivo = CreateFileA ( nombreArchivo, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (archivo == INVALID_HANDLE_VALUE){
+		return;
+	}
+
+	//lectura archivo
+	lectura = ReadFile (archivo, buffer, sizeof(buffer), &bytesLeidos, NULL);
+
+	buffer[bytesLeidos] = '\0';
+
+	if (lectura == 0) {
+		return;
+	}
+
+	CloseHandle(archivo);
+
+	strcpy(IP, dameIP (buffer));
+	strcpy(PORT, damePuerto (buffer));
+
+	return 0;
+}
 
 char *obtenerComando(char *comando){
 	int n, 
