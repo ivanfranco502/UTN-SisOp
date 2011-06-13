@@ -5,6 +5,9 @@
 #include <string.h>
 #include <process.h>
 #include "funcionesftp.h"
+#include "funcionesConfig.h"
+#include "funcionesHandleFile.h"
+#include "funcionesLog.h"
 
 #define SOCKET_MAX_BUFFER 5000
 
@@ -34,9 +37,9 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	SOCKET clienteDatos;
 	int addrlen = sizeof(struct sockaddr_in);
 	int cantidadBytes;
-	unsigned puerto = 1025;
 	char IP[16];
 	char port[6];
+	unsigned puerto = 1025;
 	struct sockaddr_in *local_address = HeapAlloc(heapDatos, 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(heapDatos, 0, addrlen);
 	reg_cliente *datos_cliente  = HeapAlloc(heapDatos, HEAP_NO_SERIALIZE, sizeof(reg_cliente));
@@ -46,7 +49,9 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
     local_address->sin_family = AF_INET;
 	local_address->sin_addr.s_addr=INADDR_ANY;
 
-	getConfig(IP, port);
+	getConfigFTP(IP, port);
+
+	strcpy(datos_cliente->IP, IP);
 
 	sscanf(port, "%d", &puerto);
 	
@@ -59,7 +64,6 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	printf("bindeo exitoso!!\n");
 
 	datos_cliente->puerto_datos= puerto-1;
-	strcpy(datos_cliente->IP, IP);
 
 	listen(descriptorD,100);
 
@@ -117,8 +121,8 @@ int rta_NOOP (char *Response, char *arg,reg_cliente *datos_cliente){
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
 }
-
 int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
+	borrarArchivo(datos_cliente->current_path, arg);
 	strcpy(Response, "250 DELE command successful");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -134,7 +138,7 @@ int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
 	}else if((strncmp(arg,"I",1))==0){
 		strcpy(datos_cliente->type,"BINARY");
 	}
-//	strcat(Response, "\r\n"); esta linea hija de puta cagaba todo!! ya venia el arg con \r\n
+	strcat(Response, "\r\n");
 
 	printf(" voy a enviar \n" );
 	send(datos_cliente->socket_comando, Response , strlen("200 Type set to A\r\n"),0);
@@ -143,8 +147,12 @@ int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
 }
 
 int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
+	char message[5000];
+	
 	datos_cliente->envio_o_recibo='E';
-	strcpy(datos_cliente->buffer, "-rwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 archivo1.txt\r\n-rwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 archivo2.txt\r\ndrwxrwxrwx 1 ftp ftp 4096 Sep 02 2009 directorio1\r\n");
+	leerArchivosDeCarpeta(datos_cliente->current_path, &message);
+
+	strcpy(datos_cliente->buffer, message);
 				 
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
@@ -160,8 +168,9 @@ int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
 }
 
 int rta_CWD (char *Response,char *arg,reg_cliente *datos_cliente){
+	strcpy(datos_cliente->ftp_path, arg);
+	strcpy(datos_cliente->current_path, realizarCambioDeDirectorio(datos_cliente->original_path,datos_cliente->ftp_path));
 	strcpy(Response, "250 CWD command successful");
-	strcpy(datos_cliente->current_path, arg);
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
@@ -169,7 +178,7 @@ int rta_CWD (char *Response,char *arg,reg_cliente *datos_cliente){
 
 int rta_PWD (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "257 \"");
-	strcat(Response, datos_cliente->current_path); 
+	strcat(Response, datos_cliente->ftp_path); 
 	strcat(Response, "\" is the current directory");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -182,15 +191,17 @@ int rta_HELP (char *Response,char *arg,reg_cliente *datos_cliente){
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
 }
-
+/////////////////////////////////////////////////////////////////////arreglar el retr con handlefile
 int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	datos_cliente->envio_o_recibo='E';
-	strcpy(datos_cliente->buffer,"caca caca");
+	strcpy(datos_cliente->buffer, getDataFromFile(datos_cliente->original_path, arg));
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
 	strcat(Response, " mode data connection for ");
 	strcat(Response, arg);
-//	strcat(Response, "(63805 bytes)");  comente por filezilla,, no se que onda agregara un \n al arg?
+	strcat(Response, "(");
+	strcat(Response, getSizeOfFile(datos_cliente->original_path, arg));
+	strcat(Response, " bytes)");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	printf(Response);
@@ -200,7 +211,7 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	send(datos_cliente->socket_comando,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
 	return 0;
 }
-
+///////////////////////////////////////////////////////////////////////arreglar el stor con handlefile
 int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
 	datos_cliente->envio_o_recibo='R';
 //	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
@@ -208,7 +219,7 @@ int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
 	strcat(Response, datos_cliente->type);
 	strcat(Response, "mode data connection for ");
 	strcat(Response, arg);
-//	strcat(Response, "\r\n");	otra linea de mierda que caga todo?!?!?! SII era esta tambien
+	strcat(Response, "\r\n");	//otra linea de mierda que caga todo?!?!?! SII era esta tambien
 //	send(datos_cliente->socket_comando, Response, strlen(Response),0); 
 	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
 	 
@@ -225,69 +236,6 @@ int rta_USER (char *Response, char *arg,reg_cliente *datos_cliente){
 	strcpy(Response, "230 Usuario anonimo logueado");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
-	return 0;
-}
-
-char *dameIP (char *buff) {
-	char IP[16];
-	int i=0;
-	
-	while (buff[i] != ':'){
-		IP[i]=buff[i];
-		i++;
-	}
-	IP[i]='\0';
-	return IP;
-}
-
-
-char *damePuerto(char *buff){
-	char PORT[6];
-	int i=0;
-	int j=0;
-
-	while (buff[i] != ':'){
-		i++;
-	}
-	while (buff[i] != '\0'){
-		if(buff[i] != ':'){
-			PORT[j]=buff[i];
-			j++;
-		}
-		i++;
-	}
-	PORT[j]='\0';
-	return PORT;
-}
-
-int getConfig (char *IP, char *PORT){
-	HANDLE *archivo;
-	DWORD bytesLeidos;
-	LPCSTR nombreArchivo = "ftp.config";
-	char buffer[100];
-	int lectura;
-
-	//apertura archivo
-	archivo = CreateFileA ( nombreArchivo, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-	if (archivo == INVALID_HANDLE_VALUE){
-		return;
-	}
-
-	//lectura archivo
-	lectura = ReadFile (archivo, buffer, sizeof(buffer), &bytesLeidos, NULL);
-
-	buffer[bytesLeidos] = '\0';
-
-	if (lectura == 0) {
-		return;
-	}
-
-	CloseHandle(archivo);
-
-	strcpy(IP, dameIP (buffer));
-	strcpy(PORT, damePuerto (buffer));
-
 	return 0;
 }
 
@@ -317,22 +265,25 @@ char *obtenerComando(char *comando){
 char *obtenerParametro(char *comando){
  int n, 
   pasoComando,
-  aux;
+  aux,
+  caracteresPasandoComando;
  char parametro[30];
  
  n = 0;
  pasoComando = 0;
  aux = 0;
+ caracteresPasandoComando = 0;
  
- while (comando[n] != '\0'){
+ while ((comando[n] != '\0') && (comando[n] != '\r')){
   if ((comando[n] == ' ') || (comando[n] == '\r')){
    pasoComando = 1;
   }
   if (pasoComando) {
-   if(comando[n] != ' '){
-    parametro[aux]= comando[n];
-    aux++;
-   }
+	  if((comando[n] != ' ') || (caracteresPasandoComando > 0)){
+		parametro[aux]= comando[n];
+		aux++;
+	}
+	caracteresPasandoComando++;
   }
   n++;
  }
@@ -397,47 +348,6 @@ int command_handler(t_command_handler *vector_comandos,char *comando, char *argu
 	}else
 		(*(vector_comandos[i].pfunc)) (Response, argumento, datos_cliente);
 	
-
-}
-int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *tipoLog, char *dato){
-	int bytesTransferidos,
-		n;
-	char log[100],
-		 fecha[13],
-		 tID[6];
-	SYSTEMTIME  st;
-	HANDLE out = CreateFileA("ntvc.log", GENERIC_WRITE, 0, NULL, 4, FILE_ATTRIBUTE_NORMAL, NULL);
-	GetLocalTime(&st);
-	sprintf(fecha,"%d:%d:%d.%d", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-
-	sprintf(tID, "%d", threadID);
-
-	bytesTransferidos = 0;
-
-	strcpy(log, "[");
-	strcat(log, fecha);
-	strcat(log, "][");
-	strcat(log, nombreProceso);
-	strcat(log, "][");
-	strcat(log, pIDProceso);
-	strcat(log, "][");
-	strcat(log, tID);
-	strcat(log, "][");
-	strcat(log, tipoLog);
-	strcat(log, "][");
-	strcat(log, dato);
-	strcat(log, "]\r\n\0");
-	
-	n = 0;
-	while (log[n] != '\0'){
-		n++;
-	}
-
-	SetFilePointer(out,0,0,FILE_END);	
-	WriteFile(out, log, n, &bytesTransferidos, NULL);
-
-	CloseHandle(out);
-	return 0;
 }
 
 void paraElMain(t_command_handler * vector_comandos){

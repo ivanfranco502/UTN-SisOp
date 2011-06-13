@@ -179,7 +179,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\funcionesConfig.c"
+				>
+			</File>
+			<File
 				RelativePath=".\funcionesftp.c"
+				>
+			</File>
+			<File
+				RelativePath=".\funcionesHandleFile.c"
+				>
+			</File>
+			<File
+				RelativePath=".\funcionesLog.c"
 				>
 			</File>
 		</Filter>
@@ -189,7 +201,19 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\funcionesConfig.h"
+				>
+			</File>
+			<File
 				RelativePath=".\funcionesftp.h"
+				>
+			</File>
+			<File
+				RelativePath=".\funcionesHandleFile.h"
+				>
+			</File>
+			<File
+				RelativePath=".\funcionesLog.h"
 				>
 			</File>
 		</Filter>

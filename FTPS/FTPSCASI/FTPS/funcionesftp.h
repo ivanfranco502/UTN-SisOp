@@ -6,6 +6,8 @@ typedef struct  {
                 unsigned puerto_datos;
 				char IP[16];
                 char current_path[100];
+				char original_path[100];
+				char ftp_path[50];
 				SOCKET socket_comando;
 				char envio_o_recibo;
 				char buffer[SOCKET_MAX_BUFFER];
@@ -26,8 +28,4 @@ char *seleccionadorDeRespuesta (char *, char *, char *, char *, int);
 char *obtenerComando (char *comando);
 char *obtenerParametro (char *comando);
 char *obtenerParametrosParaPASV(char *, unsigned);
-int printLog(char *,char *, unsigned, char *, char *);
 int command_handler(t_command_handler *, char *, char *, reg_cliente *);
-char *damePuerto(char *);
-char *dameIP (char *);
-int getConfig (char *, char *);
