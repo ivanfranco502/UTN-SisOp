@@ -1,0 +1,10 @@
+char *obtenerMesEscrito(SYSTEMTIME);
+char *obtenerFechaCreacion(WIN32_FIND_DATAA);
+char *pasarArchivoAMensajeFTP(WIN32_FIND_DATAA);
+void leerArchivosDeCarpeta(char *, char *);
+void borrarArchivo(char *, char *);
+char *realizarCambioDeDirectorio(char *, char *);
+char *getDirectorioNuevo(char *);
+char *getDataFromFile(char *, char *);
+char *getSizeOfFile(char *, char *);
+void leerArchivoParaObtenerData (char *, char*);
