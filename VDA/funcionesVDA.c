@@ -90,21 +90,20 @@ int x=0,num=0,i=0;
 		}
 		x++;
 	}
-	while(i!=10){
+	if(num!=1){
+		while(cache[i]!=0){
+			i++;
+		}
 		if(cache[i]==0){
 			cache[i]=ptr->dirLogica;
-			i=10;
-		}else{
-			cache[9]=0;
-			x=9;
-			while(x!=0){
-				cache[x]=cache[x-1];
-				x--;
+			}else{
+				x=9;
+				while(cache[x]!=0){
+					cache[x]=cache[x-1];
+					x--;
+				}
+				cache[0]=ptr->dirLogica;
 			}
-			cache[0]=ptr->dirLogica;
-			i=10;
-		}
-	i++;	
 	}
 return(num);
 }
@@ -129,24 +128,27 @@ while (lista!=NULL){
 		esta=buscarCache(ptr);
 		if (esta==1){
 					CHS=getCHS(ptr->dirLogica);
-					printf("Sectores Leidos:%d",0);//,CHS.sector);
+					printf("\nSectores Leidos:%d - cache",CHS.sector);
 					printf("\nTiempo consumido:%d",0);
 					datos=leer(ptr->dirLogica);
 					printf("\n%s..\n",datos);
 		}else{
 			cabezal->dirLogica=ptr->dirLogica;
 			cabezal->pista=ptr->pista;
-			sumaTiempos=sumaTiempos+ptr->tiempo;
+			dir=leerCabezal();
+			CHS=getCHS(dir);
+			sumaTiempos=sumaTiempos+abs(ptr->pista-CHS.pista);
 			grabarCabezal(ptr->dirLogica);
 			switch(ptr->accion){
 				case 1:
 					CHS=getCHS(ptr->dirLogica);
-					printf("Sectores Leidos:%d",CHS.sector);//,CHS.sector);
+					printf("\nSectores Leidos:%d",CHS.sector);//,CHS.sector);
 					printf("\nTiempo consumido:%d",sumaTiempos);
 					datos=leer(ptr->dirLogica);
 					printf("\n%s..\n",datos);//memcpy(str1,datos.dato,10)),ultimosChars(datos.dato,10));
 				break;
 			}
+		}
 			ptr2=lista;
 			while ((ptr2->proximo!=ptr) && (ptr!=lista)){
 				ptr2=ptr2->proximo;
@@ -160,7 +162,6 @@ while (lista!=NULL){
 				free(ptr);
 				ptr=ptr2;
 			}
-		}
 }
 	free(cabezal);
 }
@@ -426,7 +427,7 @@ struct buffer info;
 	}
 	info.dato1=leer(dir1);
 	info.dato2=leer(dir2);
-	free(nodo1);free(nodo2);
+	//free(nodo1);free(nodo2);
 	return(info);
 }
 
@@ -436,18 +437,17 @@ Nodo *nodo1=NULL,*nodo2=NULL,*lista=NULL,*nodo;
 
 int num=0;
 	nodo1=generarNodo(datos.dir1);
-	nodo1->accion=2;
-	nodo2=generarNodo(datos.dato2);
-	nodo2->accion=2;
+	nodo1->accion=1;
+	nodo1->dato=datos.dato1;
+	nodo2=generarNodo(datos.dir2);
+	nodo2->dato=datos.dato2;
+	nodo2->accion=1;
 	lista=InsertarNodo(lista,nodo1);
 	lista=InsertarNodo(lista,nodo2);
-	nodo=nodo1;
-	while(nodo!=NULL){
-		nodo=mostrarLista(lista);	
-	}
-	grabar(datos.dato1,datos.dato1);
-	grabar(datos.dato2,datos.dato2);
-	free(nodo1);free(nodo2);
+	mostrarLista(lista);	
+	grabar(datos.dir1,datos.dato1);
+	grabar(datos.dir2,datos.dato2);
+//	free(nodo1);free(nodo2);
 	return(num);
 return(num);
 }
