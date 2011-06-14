@@ -11,21 +11,26 @@
 #include "funcionesVDA.h"
 
 #define SOCKET_MAX_BUFFER 100
+#define MAX_SEM_COUNT 10
 
+HANDLE hSemaphore; 
 
 WSADATA wsaData;
 unsigned __stdcall kss( void*);
 
 unsigned __stdcall consola1( void* pArguments )
 {
-int opcion=0,i=0;
+int opcion=0,i=0,c=0;
 long dirLogica;
 Nodo *nodo,*lista=NULL;
 struct chs CHS;
 struct info datos;
-char *str1,*str2;
-
-	system ("cls");
+char dir[10];
+char x[2];
+	while(1){
+//		opcion=0;
+//		while(opcion!=1 && opcion!=2){
+		system ("cls");
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),9);
 		printf("1-Grabar\n");
@@ -35,32 +40,34 @@ char *str1,*str2;
 	//SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),9);
 		printf("2-Posicion Cabezal\n");
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),15);
-
-	while(opcion!=1 && opcion!=2){
-		scanf("%i\n",&opcion);		
-		switch(opcion){
-			case 1:
-				printf("Escriba los sectores que desea leer\n");
-				while(i<3){
-					printf("Escriba la Direccion Logica:");
-					scanf("%d\n",&dirLogica);
-					nodo=generarNodo(dirLogica);
-					nodo->accion=1;
-					lista=InsertarNodo(lista,nodo);
-					i++;
+	if(gets(x)){
+		opcion=atoi(x);		
+				switch(opcion){
+					case 1:
+						printf("Escriba los sectores que desea leer\n");
+						WaitForSingleObject(hSemaphore,INFINITE);
+						while(i<3){
+							printf("Escriba la Direccion Logica:");
+							scanf("%d",&dirLogica);
+							nodo=generarNodo(dirLogica);
+							nodo->accion=1;
+							lista=InsertarNodo(lista,nodo);
+							i++;
+						}
+						mostrarLista(lista);
+						i=0;nodo=NULL;lista=NULL;
+						ReleaseSemaphore(hSemaphore,1,NULL);
+					break;
+					case 2:
+						system ("cls");
+						posCabezal();
+					break;
+					default:
+						printf("NO esta en las opciones!!\n");
 				}
-				mostrarLista(lista);
-				opcion=1;
-			break;
-			case 2:
-				system ("cls");
-				posCabezal();
-			break;
-			default:
-				printf("NO esta en las opciones!!\n");
-		}
-
-	}
+			}
+		}	
+	
 
     _endthreadex( 0 );
     return 0;
@@ -69,11 +76,34 @@ char *str1,*str2;
 int main()
 {	
 	int c=0;
+	unsigned threadID,threadID2;
 	HANDLE hThread,hThread2;
-    unsigned threadID;
+	hSemaphore = CreateSemaphore(NULL,MAX_SEM_COUNT,MAX_SEM_COUNT, NULL);
+	while(1){
+		hThread = (HANDLE)_beginthreadex( NULL, 0, &consola1, NULL, 0, &threadID );
+		hThread2 = (HANDLE)_beginthreadex( NULL, 0, &kss, NULL, 0, &threadID2 );
+		
+		WaitForSingleObject( hThread,INFINITE );
+		WaitForSingleObject( hThread2,INFINITE );
+	}
+	CloseHandle( hThread );
+	CloseHandle( hThread2 );
+	CloseHandle( hSemaphore );
+}
+
+
+unsigned __stdcall kss( void* pArguments )
+{
+
+    // Thread de comandos
+	long escrito;
+	struct infoGrabar buffer;
+	struct buffer datos;
+	HANDLE  heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
+	int corrector;
 	SOCKET descriptor;
 	int *remoteClient;
-	int i, a, addrlen = sizeof(struct sockaddr_in);
+	int r=-1,i, a, addrlen = sizeof(struct sockaddr_in);
 	
 	struct sockaddr_in *local_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
@@ -94,52 +124,24 @@ int main()
 	bind (descriptor,(struct sockaddr *) local_address, addrlen);
 	listen(descriptor,100);
 
-	while(c!=27){
-		hThread = (HANDLE)_beginthreadex( NULL, 0, &consola1, NULL, 0, &threadID );
-		
-	/*	if((*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!=-1){
-			printf("Cliente:%d\n", *remoteClient);
-			printf("%d\n", *remoteClient);
-			hThread2 = (HANDLE) _beginthreadex(NULL,0, &kss, (void*) remoteClient, 0, &threadID);
-			WaitForSingleObject( hThread2, 1000000 );
-		}*/
-	
-		WaitForSingleObject( hThread,1000000 );
-		CloseHandle( hThread );
-		printf("Desea seguir? ENTER(sigue) ESC(termina)");
-		c=getchar();
+	while((*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))== -1){
+		printf("%d",*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen));
 	}
-	CloseHandle( hThread2 );
-}
-
-
-unsigned __stdcall kss( void* pArguments )
-{
-
-    // Thread de comandos
-	long escrito;
-	struct infoGrabar buffer;
-	struct buffer datos;
-	HANDLE  heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
-	HANDLE hThreadDatos;
-	int corrector;
-	
-
-	int *remoteClient  = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(int));
-	remoteClient = (int*) pArguments;
-
-	
 	/* aca va el send y rcv de datos */
-	
-		recv(*remoteClient,(void *) &buffer,1032,0);
-		if(buffer.dato1==NULL && buffer.dato2==NULL){
-			datos=getSectores(buffer.dir1,buffer.dir2);
-			send(*remoteClient,(void *)&datos,1024,0);
-		}else{
-			escrito=putSectores(buffer);
-			send(*remoteClient,escrito,8,0);
-		}
-	
+	while(r!=0){
+		r=recv(*remoteClient,(void *) &buffer,1032,0);
+		if(r>0){
+			if(buffer.dato1=="NULL" && buffer.dato2=="NULL"){
+				datos=getSectores(buffer.dir1,buffer.dir2);
+				send(*remoteClient,(void *)&datos,1024,0);
+			}else{
+				WaitForSingleObject(hSemaphore,INFINITE);
+				escrito=putSectores(buffer);
+				ReleaseSemaphore(hSemaphore, 1,NULL);
+				send(*remoteClient,escrito,8,0);
+			}
+		}	
+	}
 	HeapDestroy(heap);
     _endthreadex( 0 );
 
