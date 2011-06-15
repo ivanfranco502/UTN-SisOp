@@ -7,7 +7,7 @@
 int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *tipoLog, char *dato){
 	int bytesTransferidos,
 		n;
-	char log[100],
+	char log[500],
 		 fecha[13],
 		 tID[6];
 	SYSTEMTIME  st;
