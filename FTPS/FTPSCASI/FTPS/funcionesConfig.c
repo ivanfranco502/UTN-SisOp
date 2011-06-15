@@ -59,6 +59,87 @@ char *damePuerto(char *buff){
 	return PORT;
 }
 
+char *getIPKSS(char *buff){
+	char IP[16];
+	int i=0;
+	int j=0,
+		pasoCentinelas = 0;
+
+	while (pasoCentinelas < 3){
+		if(buff[i] == '>'){
+			pasoCentinelas++;
+		}
+		i++;
+	}
+	while (pasoCentinelas < 4){
+		if(buff[i] != '>'){
+			IP[j] = buff[i];
+			j++;
+		}else{
+			pasoCentinelas++;
+		}
+		i++;
+	}
+	IP[j]='\0';
+	return IP;
+}
+
+char *getPortKSS(char *buff){
+	char PORT[6];
+	int i=0;
+	int j=0,
+		pasoCentinelas = 0;
+
+	while (pasoCentinelas < 4){
+		if(buff[i] == '>'){
+			pasoCentinelas++;
+		}
+		i++;
+	}
+	while (buff[i]!='\0'){
+		if(buff[i] != '>'){
+			PORT[j] = buff[i];
+			j++;
+		}else{
+			pasoCentinelas++;
+		}
+		i++;
+	}
+	PORT[j]='\0';
+	return PORT;
+}
+void getConfigKSS (char *IP, unsigned puerto){
+	HANDLE *archivo;
+	DWORD bytesLeidos;
+	LPCSTR nombreArchivo = "ftp.config";
+	char buffer[100];
+	char port[6];
+	int lectura;
+
+	//apertura archivo
+	archivo = CreateFileA (nombreArchivo, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (archivo == INVALID_HANDLE_VALUE){
+		return;
+	}
+
+	//lectura archivo
+	lectura = ReadFile (archivo, buffer, sizeof(buffer), &bytesLeidos, NULL);
+
+	buffer[bytesLeidos] = '\0';
+
+	if (lectura == 0) {
+		return;
+	}
+
+	CloseHandle(archivo);
+
+
+	strcpy(IP, getIPKSS (buffer));
+	strcpy(port,getPortKSS(buffer));
+	sscanf(port, "%d", &puerto);
+}
+
 void getConfigPath (char *PATH){
 	HANDLE *archivo;
 	DWORD bytesLeidos;

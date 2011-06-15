@@ -36,15 +36,18 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
     // Thread de comandos
 	
 	HANDLE  heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
+	HANDLE heapKss = HeapCreate(HEAP_NO_SERIALIZE, 100*100, 0);
 	int corrector;
 	char buffer[100],
 		 comando[5],
 		 argumento[50],
 		 path[100];
 	SOCKET *aux = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(SOCKET));
+	SOCKET *kss = HeapAlloc(heapKss, HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	reg_cliente *datos_cliente  = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(reg_cliente));
 	aux = (SOCKET*) pArguments;
 	datos_cliente->socket_comando = *aux;
+	datos_cliente->socketKSS = *kss;
 	strcpy(datos_cliente->current_path, "/");
 	datos_cliente->threadID=threadID[datos_cliente->socket_comando];
 	//HeapFree(heap, HEAP_NO_SERIALIZE, aux);
@@ -57,6 +60,9 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	strcpy(datos_cliente->original_path, path);
 	strcpy(datos_cliente->ftp_path,"/");
 	
+	getConfigKSS(datos_cliente->ipKSS, datos_cliente->puertoKSS);
+	
+	//send(datos_cliente->socketKSS, );  SEND Y RECEIVE AL KERNEL CON PROTOCOLO MPS
 
 	printLog("Thread Comandos","1",datos_cliente->threadID,"INFO","Conexion al Thread de Comandos");
 
@@ -138,7 +144,6 @@ int main(){
 			hThread[*socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) socketAux, 0, &threadID[*socketAux]);
 			//printf("%d", *socketAux);
 			printLog("New Client","0",threadID[*socketAux],"INFO","Conexion Nuevo cliente al puerto ftp");
-
 		}
 
 		for (i=0; i<CANTIDAD_CLIENTES;i++){
