@@ -8,6 +8,9 @@ typedef struct  {
                 char current_path[100];
 				char original_path[100];
 				char ftp_path[50];
+				char ipKSS[16];
+				unsigned puertoKSS;
+				SOCKET socketKSS;
 				SOCKET socket_comando;
 				char envio_o_recibo;
 				char buffer[SOCKET_MAX_BUFFER];
