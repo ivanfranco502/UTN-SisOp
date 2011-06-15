@@ -5,6 +5,6 @@ void leerArchivosDeCarpeta(char *, char *);
 void borrarArchivo(char *, char *);
 char *realizarCambioDeDirectorio(char *, char *);
 char *getDirectorioNuevo(char *);
-char *getDataFromFile(char *, char *);
+void *getDataFromFile(char *, char *);
 char *getSizeOfFile(char *, char *);
 void leerArchivoParaObtenerData (char *, char*);

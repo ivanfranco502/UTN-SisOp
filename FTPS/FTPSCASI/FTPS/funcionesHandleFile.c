@@ -171,26 +171,22 @@ void leerArchivoParaObtenerData(char *path, char *bufferDef){
 	//lectura archivo
 	lectura = ReadFile (archivo, buffer, sizeof(buffer), &bytesLeidos, NULL);
 
-	buffer[bytesLeidos] = '\0';
-
 	if (lectura == 0) {
 		return;
 	}
 
 	CloseHandle(archivo);
 
-	strcpy(bufferDef, buffer);
+	memcpy(bufferDef, buffer, bytesLeidos);
 }
 
-char *getDataFromFile(char *originalPath, char *archivo){
-	char pathFinal[100],
-		 bufferResp[5000];
+void *getDataFromFile(char *originalPath, char *archivo, char *buffer){
+	char pathFinal[100];
 
 	strcpy(pathFinal, realizarCambioDeDirectorio(originalPath, archivo));
 	
-	leerArchivoParaObtenerData(pathFinal, bufferResp);
+	leerArchivoParaObtenerData(pathFinal, buffer);
 
-	return(bufferResp);
 }
 
 char *getSizeOfFile (char *originalPath, char *archivo){
