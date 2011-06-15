@@ -152,7 +152,6 @@ void leerArchivosDeCarpeta(char *path, char *mensaje){
 		}
 	} while (FindNextFileA(fileHandle, &fileData) != 0);
 	strcat(mensaje, "\r\n");
-	printf("%s", mensaje);
 }
 
 void leerArchivoParaObtenerData(char *path, char *bufferDef){
