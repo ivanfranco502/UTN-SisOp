@@ -194,7 +194,7 @@ int rta_HELP (char *Response,char *arg,reg_cliente *datos_cliente){
 /////////////////////////////////////////////////////////////////////arreglar el retr con handlefile
 int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	datos_cliente->envio_o_recibo='E';
-	strcpy(datos_cliente->buffer, getDataFromFile(datos_cliente->original_path, arg));
+	getDataFromFile(datos_cliente->original_path, arg, datos_cliente->buffer);
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
 	strcat(Response, " mode data connection for ");
@@ -219,7 +219,7 @@ int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
 	strcat(Response, datos_cliente->type);
 	strcat(Response, "mode data connection for ");
 	strcat(Response, arg);
-	strcat(Response, "\r\n");	//otra linea de mierda que caga todo?!?!?! SII era esta tambien
+	strcat(Response, "\r\n");	
 //	send(datos_cliente->socket_comando, Response, strlen(Response),0); 
 	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
 	 
