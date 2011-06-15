@@ -194,6 +194,10 @@
 				RelativePath=".\funcionesLog.c"
 				>
 			</File>
+			<File
+				RelativePath=".\funcionesPayload.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -214,6 +218,10 @@
 			</File>
 			<File
 				RelativePath=".\funcionesLog.h"
+				>
+			</File>
+			<File
+				RelativePath=".\funcionesPayload.h"
 				>
 			</File>
 		</Filter>

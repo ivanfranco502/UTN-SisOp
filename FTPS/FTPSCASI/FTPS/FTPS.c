@@ -5,6 +5,7 @@
 #include <process.h>   /* _beginthreadex, _endthreadex */
 #include <string.h>
 #include "funcionesftp.h"
+#include "funcionesPayload.h"
 
 
 #define CANTIDAD_CLIENTES 65535
@@ -12,14 +13,9 @@
 
 WSADATA wsaData;
 
-
-
-
 int threadsFinalizados[CANTIDAD_CLIENTES]; /*Empiezan en cero y se ponen a uno cuando finaliza el thread */
 unsigned threadID[CANTIDAD_CLIENTES];
 t_command_handler vector_comandos[11];
-
-
 
 
 void inicializarVectorDeThreads(){
@@ -29,14 +25,10 @@ void inicializarVectorDeThreads(){
 		threadsFinalizados[i]=0;
 }
 
-
-
-
 unsigned __stdcall threadClienteNuevo( void* pArguments ){
     // Thread de comandos
 	
 	HANDLE  heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
-	HANDLE heapKss = HeapCreate(HEAP_NO_SERIALIZE, 100*100, 0);
 	int corrector;
 	char buffer[100],
 		 comando[5],
@@ -45,11 +37,9 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		 mensajeLog[100],
 		 auxLog[50];
 	SOCKET *aux = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(SOCKET));
-	SOCKET *kss = HeapAlloc(heapKss, HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	reg_cliente *datos_cliente  = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(reg_cliente));
 	aux = (SOCKET*) pArguments;
 	datos_cliente->socket_comando = *aux;
-	datos_cliente->socketKSS = *kss;
 	strcpy(datos_cliente->current_path, "/");
 	datos_cliente->threadID=threadID[datos_cliente->socket_comando];
 	//HeapFree(heap, HEAP_NO_SERIALIZE, aux);
@@ -61,7 +51,7 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	strcpy(datos_cliente->current_path, path);
 	strcpy(datos_cliente->original_path, path);
 	strcpy(datos_cliente->ftp_path,"/");
-	
+
 	getConfigKSS(datos_cliente->ipKSS, datos_cliente->puertoKSS);
 	
 	/*-----------------------------------Log Config----------------------------------------*/
@@ -76,8 +66,6 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	strcat(mensajeLog, auxLog);
 	printLog("Cliente Nuevo","1",datos_cliente->threadID, "INFO",mensajeLog);
 	/*--------------------------------------Fin Log Config----------------------------------*/
-
-	//send(datos_cliente->socketKSS, );  SEND Y RECEIVE AL KERNEL CON PROTOCOLO MPS
 
 	/*---------------------------------------Log Conexion ThDatos----------------------------*/
 	printLog("Thread Comandos","1",datos_cliente->threadID,"INFO","Conexion al Thread de Comandos");
@@ -127,14 +115,19 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 
 int main(){ 
     
-	
 	SOCKET descriptor;
 	SOCKET *socketAux;
+	MPS_Package *protocoloMPS = HeapAlloc(GetProcessHeap(),0, sizeof(MPS_Package));
 	HANDLE hThread[CANTIDAD_CLIENTES];
 	int a, addrlen = sizeof(struct sockaddr_in);
+	int s, len;
+	struct sockaddr_in remote;
 	unsigned i;
 	char mensajeLog[100],
-		 auxLog[50];
+		 auxLog[50],
+		 IPKSS[16],
+		 Buffer[1200];
+	unsigned puertoKSS;
 	struct sockaddr_in *local_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
 	socketAux = HeapAlloc(GetProcessHeap(),HEAP_NO_SERIALIZE, sizeof(SOCKET));
@@ -143,61 +136,112 @@ int main(){
 	printLog("Main FTPS","0",0,"DEBUG","Comienza FTP");
 	/*------------------------------end---------------------------------*/
 	
-	paraElMain(vector_comandos);
-	
-	if ((a = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
-		/*-----------------------------ERROR----------------------------------*/
-		strcpy(mensajeLog, "WSAStartup() devolvio error nro ");
-		sprintf(auxLog,"%d", a);
-		strcat(mensajeLog,auxLog);
-		printLog("Main FTP","0",0,"ERROR",mensajeLog);
-		/*---------------------------------------------------------------*/
-		return 255;
-	}
-		
-    local_address->sin_family = AF_INET;
-	local_address->sin_addr.s_addr=INADDR_ANY;
-	local_address->sin_port = htons (21);
-	
-	descriptor= socket(AF_INET, SOCK_STREAM, 0);
-	/*-----------------------------IMPRIME Descriptor Socket---------------------*/
-	strcpy(mensajeLog, "Descriptor Socket: ");
-	sprintf(auxLog,"%d",descriptor);
-	strcat(mensajeLog, auxLog);
-	printLog("Main FTP","0",0,"DEBUG",mensajeLog);
-	/*-------------------------------FIN--------------------------------*/
-	
-	bind (descriptor,(struct sockaddr *) local_address, addrlen);
-	listen(descriptor,100);
-	
-	/*-----------------------------LISTEN PORT----------------------------------*/
-    printLog("Main FTP","0",0,"DEBUG","Escuchando puerto");
-	/*---------------------------------FIN------------------------------*/
-	
-	inicializarVectorDeThreads();
-	
-	while(1){
-		if((*socketAux = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
-			hThread[*socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) socketAux, 0, &threadID[*socketAux]);
-			//printf("%d", *socketAux);
-			/*----------------------------CONEXION NUEVO CLLIENTE-----------------------------------*/
-			strcpy(mensajeLog, "Conexion Nuevo cliente al puerto ftp: ");
-			sprintf(auxLog,"%d", *socketAux);
-			strcat(mensajeLog,auxLog);
-			printLog("New Client","0",threadID[*socketAux],"INFO",mensajeLog);
-			/*---------------------------FIN CONEXION NUEVO CLIENTE------------------------------------*/
-		}
+	generar_DescriptorID(protocoloMPS->DescriptorID);
+	protocoloMPS->PayloadDescriptor='1';
+	protocoloMPS->PayloadLenght=0;
+	strcpy(protocoloMPS->Payload,"\0");
 
-		for (i=0; i<CANTIDAD_CLIENTES;i++){
-			if (threadsFinalizados[i]){
-				/*---------------------------------DESCONEXION CLIENTE------------------------------*/
-				printLog("Disconnect client","0",threadID[i], "INFO", "Desconexion cliente al puerto ftp");
-				/*-----------------------------FIN DESCONEXION CLIENTE----------------------------------*/
-				closesocket(i);
-				CloseHandle(hThread[i]);
-				threadsFinalizados[i]=0;
+	/*---------------------------------------------------------------*/
+	printLog("Main FTPS","0",0,"DEBUG","Lleno el MPS_Package");
+	/*---------------------------------------------------------------*/
+
+	if ((s = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+      	
+		/*---------------------------------------------------------------*/
+		printLog("Main FTPS","0",0,"ERROR","Error En Socket de KSS");
+		/*---------------------------------------------------------------*/
+    	
+		exit(1);
+	}
+
+	getConfigKSS(IPKSS, puertoKSS);
+
+	remote.sin_family = AF_INET;
+	remote.sin_addr.s_addr=INADDR_ANY;
+	remote.sin_port = htons (puertoKSS);
+
+	len = sizeof(struct sockaddr);
+	if (connect(s, (struct sockaddr *)&remote, len) == -1) {
+        
+		/*---------------------------------------------------------------*/
+		printLog("Main FTPS","0",0,"ERROR","Error en conexion con KSS");
+		/*---------------------------------------------------------------*/
+        
+		exit(1);
+	}
+
+	send(s, (char*)protocoloMPS,21+protocoloMPS->PayloadLenght+1, 0);
+	recv(s,Buffer,sizeof(Buffer),0);
+
+	if (((MPS_Package*)Buffer)->PayloadDescriptor=='0'){
+		/*---------------------------------------------------------------*/
+		printLog("Main FTPS","0",0,"ERROR","Handshake Fallo");
+		/*---------------------------------------------------------------*/
+	}
+	else {
+		/*---------------------------------------------------------------*/
+		printLog("Main FTPS","0",0,"DEBUG","Handshake aceptado");
+		/*---------------------------------------------------------------*/
+
+		paraElMain(vector_comandos);
+		
+		if ((a = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
+			
+			/*-----------------------------ERROR----------------------------------*/
+			strcpy(mensajeLog, "WSAStartup() devolvio error nro ");
+			sprintf(auxLog,"%d", a);
+			strcat(mensajeLog,auxLog);
+			printLog("Main FTP","0",0,"ERROR",mensajeLog);
+			/*---------------------------------------------------------------*/
+			
+			return 255;
+		}
+			
+		local_address->sin_family = AF_INET;
+		local_address->sin_addr.s_addr=INADDR_ANY;
+		local_address->sin_port = htons (21);
+		
+		descriptor= socket(AF_INET, SOCK_STREAM, 0);
+
+		/*-----------------------------IMPRIME Descriptor Socket---------------------*/
+		strcpy(mensajeLog, "Descriptor Socket: ");
+		sprintf(auxLog,"%d",descriptor);
+		strcat(mensajeLog, auxLog);
+		printLog("Main FTP","0",0,"DEBUG",mensajeLog);
+		/*-------------------------------FIN--------------------------------*/
+		
+		bind (descriptor,(struct sockaddr *) local_address, addrlen);
+		listen(descriptor,100);
+		
+		/*-----------------------------LISTEN PORT----------------------------------*/
+		printLog("Main FTP","0",0,"DEBUG","Escuchando puerto");
+		/*---------------------------------FIN------------------------------*/
+		
+		inicializarVectorDeThreads();
+		
+		while(1){
+			if((*socketAux = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
+				hThread[*socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) socketAux, 0, &threadID[*socketAux]);
+				//printf("%d", *socketAux);
+				/*----------------------------CONEXION NUEVO CLLIENTE-----------------------------------*/
+				strcpy(mensajeLog, "Conexion Nuevo cliente al puerto ftp: ");
+				sprintf(auxLog,"%d", *socketAux);
+				strcat(mensajeLog,auxLog);
+				printLog("New Client","0",threadID[*socketAux],"INFO",mensajeLog);
+				/*---------------------------FIN CONEXION NUEVO CLIENTE------------------------------------*/
 			}
 
+			for (i=0; i<CANTIDAD_CLIENTES;i++){
+				if (threadsFinalizados[i]){
+					/*---------------------------------DESCONEXION CLIENTE------------------------------*/
+					printLog("Disconnect client","0",threadID[i], "INFO", "Desconexion cliente al puerto ftp");
+					/*-----------------------------FIN DESCONEXION CLIENTE----------------------------------*/
+					closesocket(i);
+					CloseHandle(hThread[i]);
+					threadsFinalizados[i]=0;
+				}
+
+			}
 		}
 	}
 	return 0;
