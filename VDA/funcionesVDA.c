@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <db.h>
 #pragma comment (lib, "libdb48.lib") 
+#include "funcionesLog.h"
 
 int cache[10]={0,0,0,0,0,0,0,0,0,0};
 struct buffer
