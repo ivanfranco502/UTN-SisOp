@@ -1,4 +1,4 @@
-typedef struct{
+typedef struct  {
 	char nombreVDA[50];
 	char ipKSS[16];
 	unsigned puertoKss[6];
@@ -10,15 +10,7 @@ typedef struct{
 	int cacheActivada; 
 }configVDA;
 
-typedef struct{
-	char ipConexion[16];
-	unsigned puertoConexion[6];
-	char path[100];
-	char ipKSS[16];
-	unsigned puertoKss[6]; 
-}configFTP;
-
-void obtenerStructVDA(char *, configVda *configuracionInicial);
+void obtenerStructVDA(char *, configVDA *configuracionInicial);
 int obtenerParametroParaStruct(char *buffer, char *variableParametro, int arrancaContadorBuffer);
 char *damePuerto(char *); 
 char *dameIP (char *);
