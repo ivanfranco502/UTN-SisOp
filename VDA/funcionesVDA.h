@@ -1,7 +1,7 @@
 struct buffer
 {
-void *dato1;
-void *dato2;
+char *dato1;
+char *dato2;
 	
 };
 
@@ -17,6 +17,7 @@ long dir1;
 char dato1[512];
 long dir2;
 char dato2[512];	
+int accion;
 };
 struct chs
 {
@@ -51,3 +52,4 @@ void grabar(long ,void *);
 Nodo* InsertarNodo(Nodo *,Nodo *);
 Nodo* mostrarLista(Nodo *);
 Nodo* algoritmo(Nodo *,Nodo *);
+void sectLeidos(long);

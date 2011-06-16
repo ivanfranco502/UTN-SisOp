@@ -25,7 +25,7 @@ long dirLogica;
 Nodo *nodo,*lista=NULL;
 struct chs CHS;
 struct info datos;
-char dir[10];
+char dir[10],data[512];
 char x[2];
 	while(1){
 //		opcion=0;
@@ -33,12 +33,12 @@ char x[2];
 		system ("cls");
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),9);
-		printf("1-Grabar\n");
+		printf("1-Leer\n");
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),14);
-		//	printf("2-Leer\n");
-		//	printf("3-Borrar\n");
-	//SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),9);
-		printf("2-Posicion Cabezal\n");
+			printf("2-Posicion Cabezal\n");
+			printf("3-Grabar\n");
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),9);
+		printf("4-Borrar\n");
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),15);
 	if(gets(x)){
 		opcion=atoi(x);		
@@ -57,11 +57,29 @@ char x[2];
 						mostrarLista(lista);
 						i=0;nodo=NULL;lista=NULL;
 						ReleaseSemaphore(hSemaphore,1,NULL);
+						getchar();
 					break;
 					case 2:
 						system ("cls");
 						posCabezal();
+						getchar();
 					break;
+					case 3:
+						system ("cls");
+						printf("Escribir datos:");
+						gets(data);
+						printf("Escribir direccion:");
+						scanf("%d\n",&dirLogica);
+						grabar(dirLogica,data);
+						grabarCabezal(dirLogica);
+					break;
+					case 4:
+						system ("cls");
+						printf("Escribir direccion:",dirLogica);
+						scanf("%d\n",&dirLogica);
+						borrar(dirLogica);
+					break;
+					
 					default:
 						printf("NO esta en las opciones!!\n");
 				}
@@ -120,20 +138,20 @@ unsigned __stdcall kss( void* pArguments )
 	local_address->sin_addr.s_addr=INADDR_ANY;
 	local_address->sin_port = htons (21);
 
-	printf("%d\n",descriptor= socket(AF_INET, SOCK_STREAM, 0));
+	descriptor= socket(AF_INET, SOCK_STREAM, 0);
 	bind (descriptor,(struct sockaddr *) local_address, addrlen);
 	listen(descriptor,100);
 
 	while((*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))== -1){
-		printf("%d",*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen));
+		//printf("%d",*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen));
 	}
 	/* aca va el send y rcv de datos */
 	while(r!=0){
-		r=recv(*remoteClient,(void *) &buffer,1032,0);
+		r=recv(*remoteClient,(void *) &buffer,sizeof(buffer),0);
 		if(r>0){
-			if(buffer.dato1=="NULL" && buffer.dato2=="NULL"){
+			if(buffer.accion==0){
 				datos=getSectores(buffer.dir1,buffer.dir2);
-				send(*remoteClient,(void *)&datos,1024,0);
+				send(*remoteClient,(void *)&datos,sizeof(datos),0);
 			}else{
 				WaitForSingleObject(hSemaphore,INFINITE);
 				escrito=putSectores(buffer);
