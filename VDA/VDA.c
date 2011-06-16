@@ -9,6 +9,7 @@
 #include <db.h>
 #pragma comment (lib, "libdb48.lib") 
 #include "funcionesVDA.h"
+#include "funcionesLog.h"
 
 #define SOCKET_MAX_BUFFER 100
 #define MAX_SEM_COUNT 10

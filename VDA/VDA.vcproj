@@ -177,6 +177,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\funcionesConfig.c"
+				>
+			</File>
+			<File
+				RelativePath=".\funcionesLog.c"
+				>
+			</File>
+			<File
 				RelativePath=".\funcionesVDA.c"
 				>
 			</File>
@@ -190,6 +198,14 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\funcionesConfig.h"
+				>
+			</File>
+			<File
+				RelativePath=".\funcionesLog.h"
+				>
+			</File>
 			<File
 				RelativePath=".\funcionesVDA.h"
 				>
