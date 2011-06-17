@@ -1,8 +1,12 @@
-char *damePuerto(char *); 
-char *dameIP (char *);
-char *getPath (char *);
-void getConfigFTP (char *, char *);
-void getConfigPath (char *);
-char *getIPKSS(char *Buff);
-char *getPortKSS(char *Buff);
-void getConfigKSS (char *IP, unsigned puerto);
+typedef struct  {
+	char IPServer[16];
+	unsigned puertoServer;
+	char pathRaiz[100];
+	char IPKernel[16];
+	unsigned puertoKernel;
+	unsigned puertoFTPAKernel;
+}configFTP;
+
+void obtenerStructFTP(char *, configFTP *configuracionInicial);
+int obtenerParametroParaStruct(char *buffer, char *variableParametro, int arrancaContadorBuffer);
+void getConfigFTP(configFTP *config);

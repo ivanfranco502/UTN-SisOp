@@ -54,7 +54,7 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
     local_address->sin_family = AF_INET;
 	local_address->sin_addr.s_addr=INADDR_ANY;
 
-	getConfigFTP(IP, port);
+	//getConfigFTP(IP, port);
 	
 	/*---------------------------------------------------------------*/
 	strcpy(mensajeLog, "IPThDatos:");
