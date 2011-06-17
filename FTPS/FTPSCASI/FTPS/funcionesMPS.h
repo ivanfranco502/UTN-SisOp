@@ -6,5 +6,6 @@ PACK(typedef struct{
         int PayloadLenght;  //longitud del payload, 0 si no enviamos nada.
         char Payload[1050];  //mensaje.
 }MPS_Package);
-/*void generar_DescriptorID(char *);
-void llenar_Payload(MPS_Package*, char*, char, int, char*);*/
+
+int conectarConKernel();
+

@@ -195,7 +195,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\funcionesPayload.c"
+				RelativePath=".\funcionesMPS.c"
 				>
 			</File>
 		</Filter>
@@ -221,7 +221,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\funcionesPayload.h"
+				RelativePath=".\funcionesMPS.h"
 				>
 			</File>
 		</Filter>
