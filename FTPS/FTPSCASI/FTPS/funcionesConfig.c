@@ -32,9 +32,6 @@ void obtenerStructFTP(char *buffer, configFTP *configuracionInicial){
 	//puertoServer
 	contadorBuffer = obtenerParametroParaStruct(buffer, variableParametro, contadorBuffer);
 	sscanf(variableParametro, "%d", &configuracionInicial->puertoServer);
-	//PathRaiz
-	contadorBuffer = obtenerParametroParaStruct(buffer, variableParametro, contadorBuffer);
-	strcpy(configuracionInicial->pathRaiz, variableParametro);
 	//ipKernel
 	contadorBuffer = obtenerParametroParaStruct(buffer, variableParametro, contadorBuffer);
 	strcpy(configuracionInicial->IPKernel, variableParametro);
@@ -52,7 +49,7 @@ void getConfigFTP(configFTP *config){
 	LPCSTR nombreArchivo = "ftp.config";
 	char buffer[300];
 	int lectura;
-	char variableAuxiliarConfig[100]; //variable que me sirve para obtener los parametros
+	char variableAuxiliarConfig[16]; //variable que me sirve para obtener los parametros
 
 	//apertura archivo
 	archivo = CreateFileA (nombreArchivo, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);

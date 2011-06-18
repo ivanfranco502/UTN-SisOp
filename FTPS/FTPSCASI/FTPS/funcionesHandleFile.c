@@ -1,68 +1,230 @@
+#include <winsock2.h>
+#pragma comment(lib, "Ws2_32.lib")
 #include <windows.h>
 #include <string.h> 
 #include <stdio.h>
 #include <process.h>
 #include "funcionesHandleFile.h"
 
-char *obtenerMesEscrito(SYSTEMTIME creationTime){
-	char mes[4],
-		 aux[4];
+int enviarSyscallOpen(char *arg, int socketKSS, char *modoApertura){
+	char payload[50];
+	char IDpaquete[16];
+	char buffer[100];
+	int fileDescriptor;
+	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
 	
-	sprintf(aux,"%d", creationTime.wMonth);
-
-	if(strcmp(aux, "1") == 0) {
-		strcpy(mes, "Jan");
-	}else if(strcmp(aux, "2") == 0) {
-		strcpy(mes, "Feb");
-	}else if(strcmp(aux, "3") == 0) {
-		strcpy(mes, "Mar");
-	}else if(strcmp(aux, "4") == 0) {
-		strcpy(mes, "Apr");
-	}else if(strcmp(aux, "5") == 0) {
-		strcpy(mes, "May");
-	}else if(strcmp(aux, "6") == 0) {
-		strcpy(mes, "Jun");
-	}else if(strcmp(aux, "7") == 0) {
-		strcpy(mes, "Jul");
-	}else if(strcmp(aux, "8") == 0) {
-		strcpy(mes, "Aug");
-	}else if(strcmp(aux, "9") == 0) {
-		strcpy(mes, "Sep");
-	}else if(strcmp(aux, "10") == 0) {
-		strcpy(mes, "Oct");
-	}else if(strcmp(aux, "11") == 0) {
-		strcpy(mes, "Nov");
-	}else if(strcmp(aux, "12") == 0) {
-		strcpy(mes, "Dic");
+	generar_DescriptorID(paqueteSyscall->DescriptorID);
+	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
+	paqueteSyscall->PayloadDescriptor = '1';
+	strcpy(payload, "sys_open(");
+	strcat(payload, modoApertura);
+	strcat(payload,",");
+	strcat(payload, arg);
+	strcat(payload, ")");
+	strcpy(paqueteSyscall->Payload,payload);
+	paqueteSyscall->PayloadLenght = strlen(payload);
+	
+	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
+	listen(socketKSS,100);
+	recv(socketKSS, buffer, sizeof(buffer), 0);
+	
+	paqueteSyscall = (MPS_Package *)buffer;
+	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
+		if(paqueteSyscall->PayloadDescriptor){
+			sscanf(paqueteSyscall->Payload,"%d", &fileDescriptor);
+			return fileDescriptor;
+		}else{
+			return 0;
+		}
+	}else{
+		return 0;
 	}
-
-	return(mes);
 }
 
-char *obtenerFechaCreacion(WIN32_FIND_DATAA fileData){
-	SYSTEMTIME pst;
-	FILETIME ftime;
-	char day[3],
-		 month[4],
-		 year[5],
-		 response[15];
+int enviarSyscallClose(int fileDescriptor, int socketKSS){
+	char payload[50];
+	char IDpaquete[16];
+	char buffer[100];
+	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
 	
-	FileTimeToLocalFileTime(&fileData.ftCreationTime.dwLowDateTime, &ftime);
-	FileTimeToSystemTime(&ftime,&pst);
-
-	sprintf(day, "%d", pst.wDay);
-	strcpy(month, obtenerMesEscrito(pst));
-	sprintf(year, "%d", pst.wYear);
-
-	strcpy(response, month);
-	strcat(response, " ");
-	strcat(response, day);
-	strcat(response, " ");
-	strcat(response, year);
-
-	return (response);
+	generar_DescriptorID(paqueteSyscall->DescriptorID);
+	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
+	paqueteSyscall->PayloadDescriptor = '1';
+	strcpy(payload, "sys_close(");
+	strcat(payload, fileDescriptor);
+	strcat(payload, ")");
+	strcpy(paqueteSyscall->Payload,payload);
+	paqueteSyscall->PayloadLenght = strlen(payload);
+	
+	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
+	listen(socketKSS,100);
+	recv(socketKSS, buffer, sizeof(buffer), 0);
+	
+	paqueteSyscall = (MPS_Package *)buffer;
+	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
+		if(paqueteSyscall->PayloadDescriptor){
+			return 1;
+		}else{
+			return 0;
+		}
+	}else{
+		return 0;
+	}
 }
 
+char *enviarSyscallList(char *pathFTP, int socketKSS){
+	char payload[50];
+	char IDpaquete[16];
+	char buffer[1024];
+	char mensaje[1024];
+	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
+	
+	generar_DescriptorID(paqueteSyscall->DescriptorID);
+	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
+	paqueteSyscall->PayloadDescriptor = '1';
+	strcpy(payload, "sys_list(");
+	strcat(payload, pathFTP);
+	strcat(payload, ")");
+	strcpy(paqueteSyscall->Payload,payload);
+	paqueteSyscall->PayloadLenght = strlen(payload);
+	
+	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
+	listen(socketKSS,100);
+	recv(socketKSS, buffer, sizeof(buffer), 0);
+	
+	paqueteSyscall = (MPS_Package *)buffer;
+	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
+		if(paqueteSyscall->PayloadDescriptor){
+			strcpy(mensaje, pasarListaArchivosARespuestaFTP(paqueteSyscall->Payload));
+			return mensaje;
+		}else{
+			strcpy(mensaje, "");
+			return mensaje;
+		}
+	}else{
+		strcpy(mensaje, "");
+		return mensaje;
+	}
+}
+
+char *pasarListaArchivosARespuestaFTP(char *buffer){
+	int argumentosPasados = 1,
+		contadorBuffer = 0,
+		contadorArgumento = 0,
+		yaCargueArchivo = 0,
+		AuxiliarSize = 0;
+	char mensaje[1024],
+		 argumento[50],
+		 nombreArchivo[50],
+		 lineaArchivo[100];
+
+	strcpy(mensaje,"");
+
+	while(buffer[contadorBuffer] != '\0'){
+		if(buffer[contadorBuffer] != ','){
+			argumento[contadorArgumento] = buffer[contadorBuffer];
+			contadorArgumento++;
+		}else{
+			argumentosPasados++;
+		}
+		contadorBuffer++;
+		if(argumentosPasados == 3){
+			argumentosPasados = 1;
+			yaCargueArchivo = 0;
+			argumento[contadorArgumento] = '\0';
+			contadorArgumento = 0;
+			sscanf(argumento,"%d", &AuxiliarSize);
+			if(AuxiliarSize){						//es archivo
+				strcpy(lineaArchivo, "-rwxrwxrwx 1 ftp ftp ");
+			}else{									//es directorio
+				strcpy(lineaArchivo, "drwxrwxrwx 1 ftp ftp ");
+			}
+				strcat(lineaArchivo, argumento);
+				strcat(lineaArchivo, " Sep 02 2009 ");
+				strcat(lineaArchivo, nombreArchivo);
+				strcat(lineaArchivo, "\n");
+				
+				strcat(mensaje, lineaArchivo);
+		}else if ((argumentosPasados == 2) && (!yaCargueArchivo)){
+			argumento[contadorArgumento] = '\0';
+			contadorArgumento = 0;
+			strcpy(nombreArchivo, argumento);
+			yaCargueArchivo = 1;
+		}
+	}
+	strcat(mensaje, "\r\n");
+	return mensaje;
+}
+char *enviarSyscallRead(int fileDescriptor, int socketKSS){
+	char payload[50];
+	char IDpaquete[16];
+	char buffer[1024];
+	char mensaje[1024];
+	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
+	
+	generar_DescriptorID(paqueteSyscall->DescriptorID);
+	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
+	paqueteSyscall->PayloadDescriptor = '1';
+	strcpy(payload, "sys_read(");
+	strcat(payload, fileDescriptor);
+	strcat(payload, ")");
+	strcpy(paqueteSyscall->Payload,payload);
+	paqueteSyscall->PayloadLenght = strlen(payload);
+	
+	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
+	listen(socketKSS,100);
+	recv(socketKSS, buffer, sizeof(buffer), 0);
+	
+	paqueteSyscall = (MPS_Package *)buffer;
+	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
+		if(paqueteSyscall->PayloadDescriptor){
+			strcpy(mensaje, paqueteSyscall->Payload);
+			return mensaje;
+		}else{
+			strcpy(mensaje, "");
+			return mensaje;
+		}
+	}else{
+		strcpy(mensaje, "");
+		return mensaje;
+	}
+}
+
+int enviarSyscallWrite(int fileDescriptor, int socketKSS, char *bufferParaMandar){
+	char payload[50];
+	char IDpaquete[16];
+	char buffer[100];
+	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
+	
+	generar_DescriptorID(paqueteSyscall->DescriptorID);
+	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
+	paqueteSyscall->PayloadDescriptor = '1';
+	strcpy(payload, "sys_write(");
+	strcat(payload, fileDescriptor);
+	strcat(payload, ",");
+	strcat(payload, bufferParaMandar);
+	strcat(payload, ")");
+	strcpy(paqueteSyscall->Payload,payload);
+	paqueteSyscall->PayloadLenght = strlen(payload);
+	
+	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
+	listen(socketKSS,100);
+	recv(socketKSS, buffer, sizeof(buffer), 0);
+	
+	paqueteSyscall = (MPS_Package *)buffer;
+	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
+		if(paqueteSyscall->PayloadDescriptor){
+			return 1;
+		}else{
+			return 0;
+		}
+	}else{
+		return 0;
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
 char *pasarArchivoAMensajeFTP(WIN32_FIND_DATAA fileData){
 	char mensaje      [5000],
 		 fileSize     [ 10];
@@ -210,5 +372,5 @@ char *getSizeOfFile (char *originalPath, char *archivo){
 	} while ((FindNextFileA(fileHandle, &fileData) != 0) && (!encontreElArchivo));
 	
 	return(size);
-}
+}*/
 

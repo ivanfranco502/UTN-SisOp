@@ -54,19 +54,17 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
     local_address->sin_family = AF_INET;
 	local_address->sin_addr.s_addr=INADDR_ANY;
 
-	//getConfigFTP(IP, port);
+	puerto = datos_cliente->puerto_datos;
 	
 	/*---------------------------------------------------------------*/
 	strcpy(mensajeLog, "IPThDatos:");
-	strcat(mensajeLog, IP);
+	strcat(mensajeLog, datos_cliente->IP);
 	strcat(mensajeLog," PortThDatos:");
-	strcat(mensajeLog,port);
+	sprintf(auxLog,"%d",datos_cliente->puerto_datos);
+	strcat(mensajeLog, auxLog);
 	printLog("Thread Datos","2",datos_cliente->threadID, "INFO",mensajeLog);
 	/*---------------------------------------------------------------*/
 
-	strcpy(datos_cliente->IP, IP);
-	sscanf(port, "%d", &puerto);
-	
 	do{
 		local_address->sin_port = htons (puerto);
 		descriptorD= socket(AF_INET, SOCK_STREAM, 0);
@@ -179,9 +177,24 @@ int rta_NOOP (char *Response, char *arg,reg_cliente *datos_cliente){
 	return 0;
 }
 int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
-	borrarArchivo(datos_cliente->current_path, arg);
-	strcpy(Response, "250 DELE command successful");
-	strcat(Response, "\r\n");
+	int fileDescriptor,
+		resultadoOperacion;
+	//borrarArchivo(datos_cliente->current_path, arg); //funcion HandleFile
+	//AGREGAR VALIDACION SI ESTA DISPONIBLE EL SOCKET
+	fileDescriptor = enviarSyscallOpen(arg, datos_cliente->socketKSS, "2");
+	if(fileDescriptor){
+		resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+		if(resultadoOperacion){
+			strcpy(Response, "250 DELE command successful");
+			strcat(Response, "\r\n");
+		}else{
+			strcpy(Response, "450 el archivo no pudo eliminarse");
+			strcat(Response, "\r\n");
+		}
+	}else{
+		strcpy(Response, "550 archivo no encontrado");
+		strcat(Response,"\r\n");
+	}
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
 }
@@ -205,17 +218,24 @@ int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
 }
 
 int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
-	char message[5000];
+	char message[1024];
 	
 	datos_cliente->envio_o_recibo='E';
-	leerArchivosDeCarpeta(datos_cliente->current_path, &message);
+	//leerArchivosDeCarpeta(datos_cliente->current_path, &message);
+	//AGREGAR VALIDACION SI ESTA DISPONIBLE EL SOCKET
+	if(strcmp(message, "") != 0){
+		strcpy(message, enviarSyscallList(datos_cliente->ftp_path, datos_cliente->socketKSS));
 
-	strcpy(datos_cliente->buffer, message);
-				 
-	strcpy(Response, "150 Opening ");
-	strcat(Response, datos_cliente->type);
-	strcat(Response, " mode data connection for file list");
-	strcat(Response, "\r\n");
+		strcpy(datos_cliente->buffer, message);
+					 
+		strcpy(Response, "150 Opening ");
+		strcat(Response, datos_cliente->type);
+		strcat(Response, " mode data connection for file list");
+		strcat(Response, "\r\n");
+	}else{
+		strcpy(Response, "451 No se pudo Listar");
+		strcat(Response, "\r\n");
+	}
 	
 	/*---------------------------------------------------------------*/
 	printLog("Handler Command","5",datos_cliente->threadID,"DEBUG",Response);
@@ -231,7 +251,7 @@ int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
 
 int rta_CWD (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(datos_cliente->ftp_path, arg);
-	strcpy(datos_cliente->current_path, realizarCambioDeDirectorio(datos_cliente->original_path,datos_cliente->ftp_path));
+	//strcpy(datos_cliente->current_path, realizarCambioDeDirectorio(datos_cliente->original_path,datos_cliente->ftp_path));
 	strcpy(Response, "250 CWD command successful");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -253,18 +273,42 @@ int rta_HELP (char *Response,char *arg,reg_cliente *datos_cliente){
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
 }
-/////////////////////////////////////////////////////////////////////arreglar el retr con handlefile
+
 int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
+	int fileDescriptor,
+		resultadoOperacion;
+	char argumentoCompleto[100];
+	
 	datos_cliente->envio_o_recibo='E';
-	getDataFromFile(datos_cliente->original_path, arg, datos_cliente->buffer);
-	strcpy(Response, "150 Opening ");
-	strcat(Response, datos_cliente->type);
-	strcat(Response, " mode data connection for ");
-	strcat(Response, arg);
-	strcat(Response, "(");
-	strcat(Response, getSizeOfFile(datos_cliente->original_path, arg));
-	strcat(Response, " bytes)");
-	strcat(Response, "\r\n");
+	//getDataFromFile(datos_cliente->original_path, arg, datos_cliente->buffer);
+
+	strcpy(argumentoCompleto, datos_cliente->ftp_path);
+	strcat(argumentoCompleto, arg);
+	fileDescriptor = enviarSyscallOpen(argumentoCompleto, datos_cliente->socketKSS, "0");
+	if(fileDescriptor){
+		strcpy(datos_cliente->buffer, enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS));
+		if(strcmp(datos_cliente->buffer, "")!= 0){
+			strcpy(Response, "150 Opening ");
+			strcat(Response, datos_cliente->type);
+			strcat(Response, " mode data connection for ");
+			strcat(Response, arg);
+			strcat(Response, "(4096 bytes)");
+			strcat(Response, "\r\n");
+
+			resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+			if(resultadoOperacion){
+				//OK close
+			}else{
+				//FAIL close
+			}
+		}else{
+			strcpy(Response, "450 el archivo no pudo leerse");
+			strcat(Response, "\r\n");
+		}
+	}else{
+		strcpy(Response, "550 archivo no encontrado");
+		strcat(Response,"\r\n");
+	}
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	
 	/*---------------------------------------------------------------*/
@@ -274,11 +318,17 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
 	WaitForSingleObject(datos_cliente->hThreadDatos, INFINITE); // espero que termine el thread de datos
 	CloseHandle(datos_cliente->hThreadDatos);
-	send(datos_cliente->socket_comando,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
+	if(fileDescriptor && (strcmp(datos_cliente->buffer, "") != 0)){
+		send(datos_cliente->socket_comando,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
+	}
 	return 0;
 }
-///////////////////////////////////////////////////////////////////////arreglar el stor con handlefile
-int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
+
+int rta_STOR (char *Response, char *arg, reg_cliente *datos_cliente){
+	int fileDescriptor,
+		resultadoOperacion;
+	char argumentoCompleto[100];
+
 	datos_cliente->envio_o_recibo='R';
 //	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
 	strcpy(Response, "150 Opening ");
@@ -300,9 +350,31 @@ int rta_STOR (char *Response,char *arg	,reg_cliente *datos_cliente){
 	/*---------------------------------------------------------------*/
 	printLog("Handler Command","5",datos_cliente->threadID,"DEBUG","Volvi del ThDatos STOR");
 	/*---------------------------------------------------------------*/
+	
+	strcpy(argumentoCompleto, datos_cliente->ftp_path);
+	strcat(argumentoCompleto, arg);
+	fileDescriptor = enviarSyscallOpen(argumentoCompleto, datos_cliente->socketKSS, "1");
+	if(fileDescriptor){
+		resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, datos_cliente->buffer);
+		if(resultadoOperacion){
+			strcpy(Response, "226 Transfer Complete");
 
+			resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+			if(resultadoOperacion){
+				//OK close
+			}else{
+				//FAIL close
+			}
+		}else{
+			strcpy(Response, "450 el archivo no pudo escribirse");
+		}
+	}else{
+		strcpy(Response, "550 archivo no encontrado");
+	}
+
+	strcat(Response,"\r\n");
 	CloseHandle(datos_cliente->hThreadDatos);
-	send(datos_cliente->socket_comando,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
+	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
 }
 

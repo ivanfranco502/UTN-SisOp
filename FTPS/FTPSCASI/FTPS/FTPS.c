@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <process.h>   /* _beginthreadex, _endthreadex */
 #include <string.h>
-#include "funcionesftp.h"
 #include "funcionesMPS.h"
+#include "funcionesftp.h"
 #include "funcionesConfig.h"
 
 #define CANTIDAD_CLIENTES 65535
@@ -14,7 +14,7 @@
 WSADATA wsaData;
 
 typedef struct {
-	SOCKET *socketAux;
+	SOCKET socketAux;
 	configFTP *config;
 	int descriptorSocketKernel;
 }argumentosThreads;
@@ -42,26 +42,24 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		 path[100],
 		 mensajeLog[100],
 		 auxLog[50];
-	SOCKET *aux = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(SOCKET));
+	SOCKET aux = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	reg_cliente *datos_cliente  = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(reg_cliente));
 	argumentosThreads *argumentosRecibidos = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(argumentosThreads));
 	
 	argumentosRecibidos = (argumentosThreads *)pArguments;
 	aux = argumentosRecibidos->socketAux;
-	datos_cliente->socket_comando = *aux;
-	strcpy(datos_cliente->current_path, "/");
+	datos_cliente->socket_comando = aux;
+	strcpy(datos_cliente->ftp_path, "/");
 	datos_cliente->threadID=threadID[datos_cliente->socket_comando];
 	//HeapFree(heap, HEAP_NO_SERIALIZE, aux);
 	//int (*puntero)(char*, reg_cliente*);
 	datos_cliente->evento1 = CreateEvent(NULL, FALSE, FALSE, NULL);
 	datos_cliente->evento2 = CreateEvent(NULL, FALSE, FALSE, NULL);
-	
-	strcpy(datos_cliente->current_path, argumentosRecibidos->config->pathRaiz);
-	strcpy(datos_cliente->original_path, argumentosRecibidos->config->pathRaiz);
-	strcpy(datos_cliente->ftp_path,"/");
 
-	strcpy(datos_cliente->ipKSS, argumentosRecibidos->config->IPKernel);
-	datos_cliente->puertoKSS = argumentosRecibidos->config->puertoKernel;
+	strcpy(datos_cliente->IP, argumentosRecibidos->config->IPServer);
+	datos_cliente->puerto_datos = argumentosRecibidos->config->puertoServer;
+	datos_cliente->socketKSS = argumentosRecibidos->descriptorSocketKernel;
+	strcpy(datos_cliente->ftp_path,"/");
 	
 	/*---------------------------------------Log Conexion ThDatos----------------------------*/
 	printLog("Thread Comandos","1",datos_cliente->threadID,"INFO","Conexion al Thread de Comandos");
@@ -90,12 +88,12 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		strcpy(comando, obtenerComando(buffer));
 		strcpy(argumento, obtenerParametro(buffer));
 
-		/*-----------------------------COMANDO Y ARGUMENTO----------------------------------*/
+/*		-----------------------------COMANDO Y ARGUMENTO----------------------------------*/
 		strcpy(mensajeLog, comando);
 		strcat(mensajeLog, " ");
 		strcat(mensajeLog, argumento);
 		printLog("Thread Comandos","1",datos_cliente->threadID,"DEBUG",mensajeLog);
-		/*-----------------------------------FIN----------------------------*/
+/*		-----------------------------------FIN----------------------------*/
 	}
 	/*----------------------------------DESCONEXION Th Comandos-----------------------------*/
 	printLog("Thread Comandos","1",datos_cliente->threadID,"INFO","Desconexion al Thread de Comandos");
@@ -112,7 +110,7 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 int main(){ 
     
 	SOCKET descriptor;
-	//SOCKET *socketAux;
+	SOCKET socketAux;
 	HANDLE hThread[CANTIDAD_CLIENTES];
 	int a,
 		addrlen = sizeof(struct sockaddr_in);
@@ -127,9 +125,8 @@ int main(){
 	argumentosThreads *argumentos;
 	configFTP *auxiliar;
 	
-	descriptor = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	argumentos = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(argumentosThreads));
-	//socketAux = HeapAlloc(GetProcessHeap(),HEAP_NO_SERIALIZE, sizeof(SOCKET));
+	socketAux = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configFTP));
 	
 	/*---------------------------Begin------------------------------------*/
@@ -138,13 +135,9 @@ int main(){
 	
 	getConfigFTP(auxiliar);
 
-	&*argumentos->config = auxiliar;
+	argumentos->config = auxiliar;
 
 	/*-----------------------------------Log Config----------------------------------------*/
-	strcpy(mensajeLog, "Path:");
-	strcat(mensajeLog, argumentos->config->pathRaiz);
-	printLog("Main FTP","1",0, "INFO",mensajeLog);
-	
 	strcpy(mensajeLog, "IPKernel:");
 	strcat(mensajeLog, argumentos->config->IPKernel);
 	strcat(mensajeLog," PortKernel:");
@@ -189,12 +182,13 @@ int main(){
 		inicializarVectorDeThreads();
 		
 		while(1){
-			if((*argumentos->socketAux = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
-				hThread[*argumentos->socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) &(*argumentos), 0, &threadID[*argumentos->socketAux]);
+			if((socketAux = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))!= -1){
+				argumentos->socketAux = socketAux;
+				hThread[socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) &(*argumentos), 0, &threadID[socketAux]);
 				//printf("%d", *socketAux);
 				/*----------------------------CONEXION NUEVO CLLIENTE-----------------------------------*/
 				strcpy(mensajeLog, "Conexion Nuevo cliente al puerto ftp: ");
-				sprintf(auxLog,"%d", argumentos->socketAux);
+				sprintf(auxLog,"%d", socketAux);
 				strcat(mensajeLog,auxLog);
 				printLog("Main FTP","0",0,"ERROR",mensajeLog);
 				/*---------------------------------------------------------------*/
