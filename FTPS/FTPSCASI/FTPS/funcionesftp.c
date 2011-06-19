@@ -11,6 +11,8 @@
 
 #define SOCKET_MAX_BUFFER 5000
 
+int socketOcupado=0;
+
 
 
 //funciones de respuesta!! hay que agregar el codigo de ivan
@@ -180,19 +182,25 @@ int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
 	int fileDescriptor,
 		resultadoOperacion;
 	//borrarArchivo(datos_cliente->current_path, arg); //funcion HandleFile
-	//AGREGAR VALIDACION SI ESTA DISPONIBLE EL SOCKET
-	fileDescriptor = enviarSyscallOpen(arg, datos_cliente->socketKSS, "2");
-	if(fileDescriptor){
-		resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
-		if(resultadoOperacion){
-			strcpy(Response, "250 DELE command successful");
-			strcat(Response, "\r\n");
+	if(!socketOcupado){
+		socketOcupado = 1;
+		fileDescriptor = enviarSyscallOpen(arg, datos_cliente->socketKSS, "2");
+		if(fileDescriptor){
+			resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+			if(resultadoOperacion){
+				strcpy(Response, "250 DELE command successful");
+				strcat(Response, "\r\n");
+			}else{
+				strcpy(Response, "450 el archivo no pudo eliminarse");
+				strcat(Response, "\r\n");
+			}
 		}else{
-			strcpy(Response, "450 el archivo no pudo eliminarse");
-			strcat(Response, "\r\n");
+			strcpy(Response, "550 archivo no encontrado");
+			strcat(Response,"\r\n");
 		}
+		socketOcupado = 0;
 	}else{
-		strcpy(Response, "550 archivo no encontrado");
+		strcpy(Response, "550 no se pudo realizar la operacion");
 		strcat(Response,"\r\n");
 	}
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -222,19 +230,25 @@ int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
 	
 	datos_cliente->envio_o_recibo='E';
 	//leerArchivosDeCarpeta(datos_cliente->current_path, &message);
-	//AGREGAR VALIDACION SI ESTA DISPONIBLE EL SOCKET
-	if(strcmp(message, "") != 0){
-		strcpy(message, enviarSyscallList(datos_cliente->ftp_path, datos_cliente->socketKSS));
+	if(!socketOcupado){
+		socketOcupado = 1;
+		if(strcmp(message, "") != 0){
+			strcpy(message, enviarSyscallList(datos_cliente->ftp_path, datos_cliente->socketKSS));
 
-		strcpy(datos_cliente->buffer, message);
-					 
-		strcpy(Response, "150 Opening ");
-		strcat(Response, datos_cliente->type);
-		strcat(Response, " mode data connection for file list");
-		strcat(Response, "\r\n");
+			strcpy(datos_cliente->buffer, message);
+						 
+			strcpy(Response, "150 Opening ");
+			strcat(Response, datos_cliente->type);
+			strcat(Response, " mode data connection for file list");
+			strcat(Response, "\r\n");
+		}else{
+			strcpy(Response, "451 No se pudo Listar");
+			strcat(Response, "\r\n");
+		}
+		socketOcupado = 0;
 	}else{
-		strcpy(Response, "451 No se pudo Listar");
-		strcat(Response, "\r\n");
+		strcpy(Response, "550 no se pudo realizar la operacion");
+		strcat(Response,"\r\n");
 	}
 	
 	/*---------------------------------------------------------------*/
@@ -281,32 +295,38 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	
 	datos_cliente->envio_o_recibo='E';
 	//getDataFromFile(datos_cliente->original_path, arg, datos_cliente->buffer);
+	if(!socketOcupado){
+		socketOcupado = 1;
+		strcpy(argumentoCompleto, datos_cliente->ftp_path);
+		strcat(argumentoCompleto, arg);
+		fileDescriptor = enviarSyscallOpen(argumentoCompleto, datos_cliente->socketKSS, "0");
+		if(fileDescriptor){
+			strcpy(datos_cliente->buffer, enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS));
+			if(strcmp(datos_cliente->buffer, "")!= 0){
+				strcpy(Response, "150 Opening ");
+				strcat(Response, datos_cliente->type);
+				strcat(Response, " mode data connection for ");
+				strcat(Response, arg);
+				strcat(Response, "(4096 bytes)");
+				strcat(Response, "\r\n");
 
-	strcpy(argumentoCompleto, datos_cliente->ftp_path);
-	strcat(argumentoCompleto, arg);
-	fileDescriptor = enviarSyscallOpen(argumentoCompleto, datos_cliente->socketKSS, "0");
-	if(fileDescriptor){
-		strcpy(datos_cliente->buffer, enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS));
-		if(strcmp(datos_cliente->buffer, "")!= 0){
-			strcpy(Response, "150 Opening ");
-			strcat(Response, datos_cliente->type);
-			strcat(Response, " mode data connection for ");
-			strcat(Response, arg);
-			strcat(Response, "(4096 bytes)");
-			strcat(Response, "\r\n");
-
-			resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
-			if(resultadoOperacion){
-				//OK close
+				resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+				if(resultadoOperacion){
+					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+				}else{
+					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+				}
 			}else{
-				//FAIL close
+				strcpy(Response, "450 el archivo no pudo leerse");
+				strcat(Response, "\r\n");
 			}
 		}else{
-			strcpy(Response, "450 el archivo no pudo leerse");
-			strcat(Response, "\r\n");
+			strcpy(Response, "550 archivo no encontrado");
+			strcat(Response,"\r\n");
 		}
+		socketOcupado = 0;
 	}else{
-		strcpy(Response, "550 archivo no encontrado");
+		strcpy(Response, "550 no se pudo realizar la operacion");
 		strcat(Response,"\r\n");
 	}
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -351,27 +371,32 @@ int rta_STOR (char *Response, char *arg, reg_cliente *datos_cliente){
 	printLog("Handler Command","5",datos_cliente->threadID,"DEBUG","Volvi del ThDatos STOR");
 	/*---------------------------------------------------------------*/
 	
-	strcpy(argumentoCompleto, datos_cliente->ftp_path);
-	strcat(argumentoCompleto, arg);
-	fileDescriptor = enviarSyscallOpen(argumentoCompleto, datos_cliente->socketKSS, "1");
-	if(fileDescriptor){
-		resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, datos_cliente->buffer);
-		if(resultadoOperacion){
-			strcpy(Response, "226 Transfer Complete");
-
-			resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+	if(!socketOcupado){
+		socketOcupado = 1;
+		strcpy(argumentoCompleto, datos_cliente->ftp_path);
+		strcat(argumentoCompleto, arg);
+		fileDescriptor = enviarSyscallOpen(argumentoCompleto, datos_cliente->socketKSS, "1");
+		if(fileDescriptor){
+			resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, datos_cliente->buffer);
 			if(resultadoOperacion){
-				//OK close
+				strcpy(Response, "226 Transfer Complete");
+
+				resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+				if(resultadoOperacion){
+					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+				}else{
+					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+				}
 			}else{
-				//FAIL close
+				strcpy(Response, "450 el archivo no pudo escribirse");
 			}
 		}else{
-			strcpy(Response, "450 el archivo no pudo escribirse");
+			strcpy(Response, "550 archivo no encontrado");
 		}
+		socketOcupado = 0;
 	}else{
-		strcpy(Response, "550 archivo no encontrado");
+		strcpy(Response, "550 no se pudo realizar la operacion");
 	}
-
 	strcat(Response,"\r\n");
 	CloseHandle(datos_cliente->hThreadDatos);
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
