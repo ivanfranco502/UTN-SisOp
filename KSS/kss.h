@@ -65,14 +65,14 @@ nodoTDD* tdd_dump(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
 int init_vector_requests(posible_request*);
 
 int atender_handshake(nodo_lista_sockets*,nodo_lista_sockets*, MPS_Package*);
-int atender_request(nodo_lista_sockets*, MPS_Package*,nodoTDD*, nodo_lista_sockets*,posible_request*);
+nodoTDD* atender_request(nodo_lista_sockets*, MPS_Package*,nodoTDD*, nodo_lista_sockets*,posible_request*);
 
 int print_pkg (MPS_Package*);
 nodo_lista_sockets* insertar_nodo_ordenado(nodo_lista_sockets*, nodo_lista_sockets*, int);
 nodo_lista_sockets* generar_nodo_sockets();
 void sockets_activos(nodo_lista_sockets *);
 nodo_lista_sockets*  eliminar_nodo(nodo_lista_sockets*, nodo_lista_sockets*, nodo_lista_sockets*,int);
-
+Sector* generar_insertar_sector(Sector*, unsigned int);
 
 
 int buscar_request(char *,posible_request*);

@@ -277,7 +277,7 @@ int main(void)
 
 					}
 					else{
-						atender_request(j,(MPS_Package*)Buffer,Tdd,lista_sockets,vector_requests);
+						Tdd = atender_request(j,(MPS_Package*)Buffer,Tdd,lista_sockets,vector_requests);
 					}
 				}
 		sleep(1);
@@ -411,7 +411,7 @@ int atender_handshake(nodo_lista_sockets* nodo, nodo_lista_sockets* lista_socket
 	return 0;
 
 }
-int atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, posible_request* vector_requests){
+nodoTDD* atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, posible_request* vector_requests){
 	char comando[10];
 	char argumento[1040]; //ojo con la sys_write
 	int pos;
@@ -429,7 +429,7 @@ int atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* Tdd, 
 			printf("posicion %d\n",pos);
 			
                         if (pos!=-1)
-                               ( *(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID);
+                               Tdd = ( *(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID);
                                         //  llamada a syscall.. a ver casteo el punteor a void, busco el puntero de la syscall en posicion pos, y la llamo
                         else printf("comando invalido!!\n");
 
@@ -446,7 +446,7 @@ int atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* Tdd, 
 			printf("la direccion es %0x  y debe ser %0x \n",vector_requests[pos].punt_request,&sys_open);
 
 			if (pos!=-1)
-				(*(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID);
+				Tdd = (*(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID);
 					//  llamada a syscall.. a ver casteo el punteor a void, busco el puntero de la syscall en posicion pos, y la llamo
 			else printf("syscall invalida!!\n");
 
@@ -459,6 +459,7 @@ int atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* Tdd, 
 
 
 	free(mensaje);
+	return(Tdd);
 }
 
 
