@@ -53,7 +53,7 @@ return 1;
 
 //          OPEN                 OPEN                     OPEN
 
-nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 	char tipo_de_apertura;
 	char vda[5];
 	char nombre_archivo[31];
@@ -277,7 +277,7 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 
 //          READ                 READ                     READ
 
-nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 	unsigned int desc_tdd;
 	unsigned int sector1, sector2;
 	nodoTDD* nodo_aux;
@@ -317,13 +317,17 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 		if(sector1 == -1){
 		//no hay sectores
 			strcpy(nodo_aux->buffer, "\0");
+			mensaje->PayloadDescriptor = '0';
+			strcpy(mensaje->Payload, "No hay mas datos");
+			mensaje->PayloadLenght = strlen("No hay mas datos");
+			send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
 		}
 		else{
 		//hay sectores
 			sprintf(sect1,"%d",sector1);
 			sprintf(sect2,"%d",sector2);
 			mensaje->PayloadDescriptor = '2';
-			strcat(mensaje->Payload, "getSectores(");
+			strcpy(mensaje->Payload, "getSectores(");
 			strcat(mensaje->Payload, sect1);
 			strcat(mensaje->Payload, ",");
 			strcat(mensaje->Payload, sect2);
@@ -334,8 +338,9 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 			print_pkg((MPS_Package *)buffer);
 // 3) enviar buffer al ftp
 			mensaje = (MPS_Package*)buffer;
-			strcpy(sectores,mensaje->Payload);
-			rellenar_sectores(sectores);
+			memcpy(sectores,mensaje->Payload, mensaje->PayloadLenght);
+			//rellenar_sectores(sectores,);
+			strcpy(nodo_aux->buffer, sectores);
 			mensaje->PayloadDescriptor = '1';
 			strcpy(mensaje->Payload, sectores);
 			mensaje->PayloadLenght = 1024;
@@ -356,7 +361,7 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 
 //          WRITE                 WRITE                     WRITE
 
-nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 	unsigned int desc_tdd;
 	char sectores[1025];
 	nodoTDD* nodo_aux;
@@ -379,14 +384,11 @@ nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 	desctdd[i]='\0';
 	sscanf(desctdd, "%u", &desc_tdd);
 	i++;
-	while(argumento[i]!='\0'){
-		sectores[j]=argumento[i];
-		i++;
-		j++;
-	}
-	sectores[i]='\0';
-	
-	tamanio_archivo = strlen(sectores);
+	printf("llega al memcpy\n");
+	memcpy(sectores, argumento+i, lenght-i);
+	printf("pasa al memcpy\n");
+
+	tamanio_archivo = lenght-i;
 	
 	
 	
@@ -398,8 +400,8 @@ nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 		while(nodo_aux->descriptor!=desc_tdd){
 			nodo_aux=nodo_aux->siguiente;
 		}
-		rellenar_sectores(sectores);
-		strcpy(nodo_aux->buffer, sectores);
+		rellenar_sectores(sectores, tamanio_archivo);
+		memcpy(nodo_aux->buffer, sectores, tamanio_archivo);
 // 3) llamar a sysflush
 		respuesta_sys_flush = sys_flush(Tdd, lista_sockets, socket, desc, desc_tdd);
 // 4) actualizar tamanio en la TDD
@@ -429,7 +431,7 @@ nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 
 //          FLUSH                 FLUSH                     FLUSH
 
-int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char* desc, unsigned int desc_tdd){
+int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char* desc, unsigned int desc_tdd, int lenght){
 	struct infoGrabar{
 		long dir1;
 		char dato1[512];
@@ -494,7 +496,7 @@ int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char*
 		//mando el putSectores
 		mensaje->PayloadDescriptor = '3';
 		strcpy(mensaje->Payload, "putSectores(");		
-		for(i=0;i<1033;i++){
+		for(i=0;i<1032;i++){
 			mensaje->Payload[i+12] = ((char*)estructura)[i];
 		}
 		strcpy(mensaje->Payload+1044, ")");
@@ -528,7 +530,7 @@ int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char*
 
 //          CLOSE                 CLOSE                    CLOSE
 
-nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 	nodoTDD* nodo_aux;
 	MPS_Package *mensaje;
 	unsigned int desc_tdd;
@@ -584,6 +586,10 @@ nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 		
 // 3) eliminar el registro de la TDD
 		Tdd = eliminar_nodo_TDD(Tdd, desc_tdd);
+		mensaje->PayloadDescriptor = '1';
+		strcpy(mensaje->Payload, "sys close exitosa");
+		mensaje->PayloadLenght = strlen("sys close exitosa");
+		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
 	}
 	else{
 	//el archivo no está abierto
@@ -599,7 +605,7 @@ nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 
 //          LIST                 LIST                    LIST
 
-nodoTDD* sys_list(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* sys_list(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 	char vdas_montadas[500];
 	int corrector;
 	MPS_Package *mensaje;
@@ -620,17 +626,20 @@ nodoTDD* sys_list(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 		while(lista_sockets!=NULL){
 			if(! strncmp("VDA", lista_sockets->nombre,3)){
 				if(!strcmp(lista_sockets->estado,"montado")){
+					printf("llego al if anidado del list /\n");
 					strcat(vdas_montadas, lista_sockets->nombre);
-					strcat(vdas_montadas, ",");
+					printf("el nombre de la vda es: %s\n",lista_sockets->nombre);
+					strcat(vdas_montadas, ",0,");
 				}
 			}
 			lista_sockets=lista_sockets->puntero_siguiente;
 		}
-		if(corrector=strlen(vdas_montadas)>1){
+		corrector = strlen(vdas_montadas)-1;
+		if(corrector >1){
 			vdas_montadas[corrector] = '\0';
 		}
 		mensaje->PayloadDescriptor = '1';
-		strcat(mensaje->Payload, vdas_montadas);
+		strcpy(mensaje->Payload, vdas_montadas);
 		mensaje->PayloadLenght = strlen(mensaje->Payload);
 		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);	
 	}
@@ -711,14 +720,9 @@ int buscar_tipo_apertura(nodoTDD* Tdd, unsigned int desc_tdd){
 	return Tdd->tipoApertura;
 }
 
-int rellenar_sectores(char* sectores){
-	int i=0;
-	
-	while(sectores[i] != '\0'){
-		i++;
-	}
-	for(i; i<1025; i++){
-		sectores[i] = '\0';
+int rellenar_sectores(char* sectores, int desde){
+	if(desde<1024){
+		memset(sectores+desde, '\0', 1024-desde);
 	}
 	return(0);
 }
@@ -767,7 +771,7 @@ Sector* generar_insertar_sector(Sector* lista_tdd, unsigned int numero_sector){
 	
 	
 
-nodoTDD* mount(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* mount(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 
 	printf("entre a mount\n");
 	printf("%s\n",lista_sockets->estado);
@@ -786,7 +790,7 @@ nodoTDD* mount(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento,
 	return (Tdd);
 }
 
-nodoTDD* umount(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* umount(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 
         printf("entre a umount\n");
         printf("%s\n",lista_sockets->estado);
@@ -805,7 +809,7 @@ nodoTDD* umount(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento
         return (Tdd);
 }
 
-nodoTDD* tdd_dump(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* tdd_dump(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 
 	Sector* psector;
 	nodoTDD* ptdd;
@@ -838,21 +842,21 @@ nodoTDD* tdd_dump(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
         return (Tdd);
 }
 
-nodoTDD* ls(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* ls(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 
         printf("entre a ls\n");
 
         return (Tdd);
 }
 
-nodoTDD* format(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* format(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 
         printf("entre a format\n");
 
         return (Tdd);
 }
 
-nodoTDD* md5sum(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc){
+nodoTDD* md5sum(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 
         printf("entre a md5sum\n");
 
