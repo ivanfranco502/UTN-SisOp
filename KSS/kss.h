@@ -34,28 +34,28 @@ nodoTDD* agregar_nodo_TDD(nodoTDD*, nodoTDD*);
 unsigned int descriptor_nuevo(nodoTDD*);
 int buscar_socket(nodo_lista_sockets*, char*);
 int buscar_tipo_apertura(nodoTDD*, unsigned int);
-int rellenar_sectores(char*);
+int rellenar_sectores(char*, int);
 
 
 
 
 typedef struct {
                 char nombre_request[10];
-                nodoTDD* (*punt_request)(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
+                nodoTDD* (*punt_request)(nodoTDD*, nodo_lista_sockets*, char*, int, char*,int);
 }posible_request;
 
-nodoTDD* sys_open(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* sys_close(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* sys_read(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* sys_write(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* sys_list(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
+nodoTDD* sys_open(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* sys_close(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* sys_read(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* sys_write(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* sys_list(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
 
-nodoTDD* mount(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* umount(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* ls(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* format(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* md5sum(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
-nodoTDD* tdd_dump(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
+nodoTDD* mount(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* umount(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* ls(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* format(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* md5sum(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* tdd_dump(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
 
 
 
@@ -64,7 +64,7 @@ nodoTDD* tdd_dump(nodoTDD*, nodo_lista_sockets*, char*, int, char*);
 
 int init_vector_requests(posible_request*);
 
-int atender_handshake(nodo_lista_sockets*,nodo_lista_sockets*, MPS_Package*);
+nodo_lista_sockets* atender_handshake(nodo_lista_sockets*,nodo_lista_sockets*, MPS_Package*);
 nodoTDD* atender_request(nodo_lista_sockets*, MPS_Package*,nodoTDD*, nodo_lista_sockets*,posible_request*);
 
 int print_pkg (MPS_Package*);

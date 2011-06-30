@@ -103,10 +103,10 @@ int main(void){
 				mensaje->PayloadLenght=strlen(mensaje->Payload);
 				generar_DescriptorID(mensaje->DescriptorID);
 				send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
-				if (i<=3){
-					recv(s,Buffer,sizeof(Buffer),0);
-					print_pkg((MPS_Package *)Buffer);
-				}
+				
+				recv(s,Buffer,sizeof(Buffer),0);
+				print_pkg((MPS_Package *)Buffer);
+				
 //				printf("el tanio de la struct es : %d\n", sizeof(MPS_Package));
 			}
 			else { 

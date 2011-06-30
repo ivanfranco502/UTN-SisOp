@@ -273,7 +273,7 @@ int main(void)
 //								j->request=NULL;
 								break;
 						}
-		                atender_handshake(j, lista_sockets,(MPS_Package*)Buffer);
+		                lista_sockets = atender_handshake(j, lista_sockets,(MPS_Package*)Buffer);
 
 					}
 					else{
@@ -311,7 +311,7 @@ int main(void)
 }
 
 
-int atender_handshake(nodo_lista_sockets* nodo, nodo_lista_sockets* lista_sockets, MPS_Package* Buffer){
+nodo_lista_sockets* atender_handshake(nodo_lista_sockets* nodo, nodo_lista_sockets* lista_sockets, MPS_Package* Buffer){
 	int respuesta;
 	nodo_lista_sockets* aux;
 	nodo_lista_sockets* aux2;
@@ -369,8 +369,8 @@ int atender_handshake(nodo_lista_sockets* nodo, nodo_lista_sockets* lista_socket
 			break;
 	}
 
-	if(1){
-//	if(respuesta){                     //comentado para probar !!!
+//	if(1){                       //comentado para probar !!!
+	if(respuesta){                     
 //		printf("llegue al if \n");
 		mensaje=(MPS_Package*)malloc (sizeof(MPS_Package));
 		strcpy(mensaje->DescriptorID,Buffer->DescriptorID);
@@ -406,9 +406,9 @@ int atender_handshake(nodo_lista_sockets* nodo, nodo_lista_sockets* lista_socket
 		close(nodo->socket);
  		p_ant = generar_nodo_sockets();
   		p_sig = generar_nodo_sockets();
-  		eliminar_nodo(lista_sockets, p_ant, p_sig, nodo->socket);
+  		lista_sockets = eliminar_nodo(lista_sockets, p_ant, p_sig, nodo->socket);
 	}
-	return 0;
+	return lista_sockets;
 
 }
 nodoTDD* atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, posible_request* vector_requests){
@@ -429,7 +429,7 @@ nodoTDD* atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* 
 			printf("posicion %d\n",pos);
 			
                         if (pos!=-1)
-                               Tdd = ( *(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID);
+                               Tdd = ( *(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID, Buffer->PayloadLenght);
                                         //  llamada a syscall.. a ver casteo el punteor a void, busco el puntero de la syscall en posicion pos, y la llamo
                         else printf("comando invalido!!\n");
 
@@ -446,7 +446,7 @@ nodoTDD* atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* 
 			printf("la direccion es %0x  y debe ser %0x \n",vector_requests[pos].punt_request,&sys_open);
 
 			if (pos!=-1)
-				Tdd = (*(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID);
+				Tdd = (*(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID, Buffer->PayloadLenght);
 					//  llamada a syscall.. a ver casteo el punteor a void, busco el puntero de la syscall en posicion pos, y la llamo
 			else printf("syscall invalida!!\n");
 
@@ -607,5 +607,5 @@ int encontrar_mayor(nodo_lista_sockets* lista_sockets){
   }
   lista_sockets= lista_sockets->puntero_siguiente;
  } 
- return(mayor +1); 
+ return(mayor); 
 }
