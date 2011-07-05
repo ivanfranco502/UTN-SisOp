@@ -14,6 +14,7 @@
 WSADATA wsaData;
 
 typedef struct {
+	HANDLE socketOcupado;
 	SOCKET socketAux;
 	configFTP *config;
 	int descriptorSocketKernel;
@@ -60,6 +61,9 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	datos_cliente->puerto_datos = argumentosRecibidos->config->puertoServer;
 	datos_cliente->socketKSS = argumentosRecibidos->descriptorSocketKernel;
 	strcpy(datos_cliente->ftp_path,"/");
+
+	datos_cliente->thDatosOK = 0;
+	datos_cliente->socketOcupado = argumentosRecibidos->socketOcupado;
 	
 	/*---------------------------------------Log Conexion ThDatos----------------------------*/
 	printLog("Thread Comandos","1",datos_cliente->threadID,"INFO","Conexion al Thread de Comandos");
@@ -108,7 +112,6 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 } 
 
 int main(){ 
-    
 	SOCKET descriptor;
 	SOCKET socketAux;
 	HANDLE hThread[CANTIDAD_CLIENTES];
@@ -124,7 +127,7 @@ int main(){
 	MPS_Package *paqueteKSS = HeapAlloc(GetProcessHeap(), 0, sizeof(MPS_Package));
 	argumentosThreads *argumentos;
 	configFTP *auxiliar;
-	
+
 	argumentos = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(argumentosThreads));
 	socketAux = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configFTP));
@@ -136,6 +139,8 @@ int main(){
 	getConfigFTP(auxiliar);
 
 	argumentos->config = auxiliar;
+
+	argumentos->socketOcupado = CreateMutex(NULL, FALSE, NULL);
 
 	/*-----------------------------------Log Config----------------------------------------*/
 	strcpy(mensajeLog, "IPKernel:");
@@ -206,6 +211,7 @@ int main(){
 
 			}
 		}
+		CloseHandle(argumentos->socketOcupado);
 		closesocket(argumentos->descriptorSocketKernel);
 	}
 	return 0;
