@@ -68,17 +68,17 @@ int conectarConKernel(char *IPKSS, unsigned puertoKSS, MPS_Package *paqueteMPS){
 
 	send(desc, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
 	
-	listen(desc,100);
+	//listen(desc,100);
 	recv(desc, Buffer, sizeof(Buffer),0);
 
 	response = (MPS_Package *)Buffer;
-	if(response->PayloadDescriptor == '1'){
+//	if(response->PayloadDescriptor == '1'){
 		return desc;		
-	}else{
+/*	}else{
 		perror("Error Autenticacion Handshake");
 		return -1;
 	}
 
 //	WSACleanup();
-	return 0;
+	return 0;*/
 }

@@ -25,44 +25,46 @@ int enviarSyscallOpen(char *arg, int socketKSS, char *modoApertura){
 	paqueteSyscall->PayloadLenght = strlen(payload);
 	
 	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
-	listen(socketKSS,100);
+	//listen(socketKSS,100);
 	recv(socketKSS, buffer, sizeof(buffer), 0);
 	
 	paqueteSyscall = (MPS_Package *)buffer;
 	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
-		if(paqueteSyscall->PayloadDescriptor){
+		if(paqueteSyscall->PayloadDescriptor == '1'){
 			sscanf(paqueteSyscall->Payload,"%d", &fileDescriptor);
 			return fileDescriptor;
 		}else{
-			return 0;
+			return -1;
 		}
 	}else{
-		return 0;
+		return -1;
 	}
 }
 
 int enviarSyscallClose(int fileDescriptor, int socketKSS){
-	char payload[50];
-	char IDpaquete[16];
-	char buffer[100];
+	char payload[50],
+		 IDpaquete[16],
+		 buffer[100],
+		 FDescriptor[5];
 	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
 	
 	generar_DescriptorID(paqueteSyscall->DescriptorID);
 	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
 	paqueteSyscall->PayloadDescriptor = '1';
 	strcpy(payload, "sys_close(");
-	strcat(payload, fileDescriptor);
+	sprintf(FDescriptor,"%d", fileDescriptor);
+	strcat(payload, FDescriptor);
 	strcat(payload, ")");
 	strcpy(paqueteSyscall->Payload,payload);
 	paqueteSyscall->PayloadLenght = strlen(payload);
 	
 	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
-	listen(socketKSS,100);
+	////listen(socketKSS,100);
 	recv(socketKSS, buffer, sizeof(buffer), 0);
 	
 	paqueteSyscall = (MPS_Package *)buffer;
 	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
-		if(paqueteSyscall->PayloadDescriptor){
+		if(paqueteSyscall->PayloadDescriptor == '1'){
 			return 1;
 		}else{
 			return 0;
@@ -89,18 +91,13 @@ char *enviarSyscallList(char *pathFTP, int socketKSS){
 	paqueteSyscall->PayloadLenght = strlen(payload);
 	
 	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
-	listen(socketKSS,100);
+	//listen(socketKSS,100);
 	recv(socketKSS, buffer, sizeof(buffer), 0);
 	
 	paqueteSyscall = (MPS_Package *)buffer;
-	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
-		if(paqueteSyscall->PayloadDescriptor){
-			strcpy(mensaje, pasarListaArchivosARespuestaFTP(paqueteSyscall->Payload));
-			return mensaje;
-		}else{
-			strcpy(mensaje, "");
-			return mensaje;
-		}
+	if(paqueteSyscall->PayloadDescriptor == '1'){
+		strcpy(mensaje, pasarListaArchivosARespuestaFTP(paqueteSyscall->Payload));
+		return mensaje;
 	}else{
 		strcpy(mensaje, "");
 		return mensaje;
@@ -128,6 +125,9 @@ char *pasarListaArchivosARespuestaFTP(char *buffer){
 			argumentosPasados++;
 		}
 		contadorBuffer++;
+		if(buffer[contadorBuffer] == '\0'){ //va a salir pero antes necesito cargar la linea
+			argumentosPasados++;
+		}
 		if(argumentosPasados == 3){
 			argumentosPasados = 1;
 			yaCargueArchivo = 0;
@@ -156,38 +156,40 @@ char *pasarListaArchivosARespuestaFTP(char *buffer){
 	return mensaje;
 }
 char *enviarSyscallRead(int fileDescriptor, int socketKSS){
-	char payload[50];
-	char IDpaquete[16];
-	char buffer[1024];
-	char mensaje[1024];
+	char payload[50],
+		 IDpaquete[16],
+		 buffer[1024],
+		 mensaje[1025],
+		 FDescriptor[5];
 	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
 	
 	generar_DescriptorID(paqueteSyscall->DescriptorID);
 	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
 	paqueteSyscall->PayloadDescriptor = '1';
 	strcpy(payload, "sys_read(");
-	strcat(payload, fileDescriptor);
+	sprintf(FDescriptor,"%d", fileDescriptor);
+	strcat(payload, FDescriptor);
 	strcat(payload, ")");
 	strcpy(paqueteSyscall->Payload,payload);
 	paqueteSyscall->PayloadLenght = strlen(payload);
 	
 	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
-	listen(socketKSS,100);
+	//listen(socketKSS,100);
 	recv(socketKSS, buffer, sizeof(buffer), 0);
 	
 	paqueteSyscall = (MPS_Package *)buffer;
-	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
-		if(paqueteSyscall->PayloadDescriptor){
+//	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
+		if(paqueteSyscall->PayloadDescriptor != '0'){
 			strcpy(mensaje, paqueteSyscall->Payload);
 			return mensaje;
 		}else{
 			strcpy(mensaje, "");
 			return mensaje;
 		}
-	}else{
+/*	}else{
 		strcpy(mensaje, "");
 		return mensaje;
-	}
+	}*/
 }
 
 int enviarSyscallWrite(int fileDescriptor, int socketKSS, char *bufferParaMandar){
@@ -208,12 +210,12 @@ int enviarSyscallWrite(int fileDescriptor, int socketKSS, char *bufferParaMandar
 	paqueteSyscall->PayloadLenght = strlen(payload);
 	
 	send(socketKSS,(char *)paqueteSyscall, sizeof(MPS_Package)+1,0);
-	listen(socketKSS,100);
+	//listen(socketKSS,100);
 	recv(socketKSS, buffer, sizeof(buffer), 0);
 	
 	paqueteSyscall = (MPS_Package *)buffer;
 	if(strcmp(paqueteSyscall->DescriptorID, IDpaquete) == 0){
-		if(paqueteSyscall->PayloadDescriptor){
+		if(paqueteSyscall->PayloadDescriptor == '1'){
 			return 1;
 		}else{
 			return 0;
@@ -223,9 +225,8 @@ int enviarSyscallWrite(int fileDescriptor, int socketKSS, char *bufferParaMandar
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-char *pasarArchivoAMensajeFTP(WIN32_FIND_DATAA fileData){
+//\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\*/
+/*char *pasarArchivoAMensajeFTP(WIN32_FIND_DATAA fileData){
 	char mensaje      [5000],
 		 fileSize     [ 10];
 

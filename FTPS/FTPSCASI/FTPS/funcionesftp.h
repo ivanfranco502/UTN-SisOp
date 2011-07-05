@@ -7,6 +7,7 @@ typedef struct  {
 				char IP[16];
 				char ftp_path[50];
 				int socketKSS;
+				int thDatosOK;
 				SOCKET socket_comando;
 				char envio_o_recibo;
 				char buffer[SOCKET_MAX_BUFFER];
@@ -14,6 +15,7 @@ typedef struct  {
 				HANDLE hThreadDatos;
 				HANDLE evento1;
 				HANDLE evento2;
+				HANDLE socketOcupado;
 				} reg_cliente;
 
 typedef struct 	{
