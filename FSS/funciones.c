@@ -1,19 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-char existeArchivo (char *vda, char *nombreArchivo);
-char infoArchivo (char *vda, char *nombreArchivo);
-void eliminarArchivo (char *vda, char *nombreArchivo);
-void crearArchivo (char *vda, char *nombreArchivo);
-void actualizarTamanio (char *vda, char *nombreArchivo, long nuevoTamanio);
-void crearTablaSectoresLibres (char *vda, int cantidadSectores);
-char dosSectoresLibres (char *vda);
-void asignarSectores (char *vda, char *nombreArchivo, char *sectores);
+#include "funciones.h"
 
 
 
-char existeArchivo (char *vda, char *nombreArchivo){
+char* existeArchivo (char *vda, char *nombreArchivo){
 
 	FILE *archivo;
 	char no[20]="NO", ok[20]="OK",dir[40];
@@ -33,13 +25,13 @@ return *ok;
 
 }
 
-char infoArchivo (char *vda, char *nombreArchivo){
+char* infoArchivo (char *vda, char *nombreArchivo){
 
 
 
 	FILE *archivo;
 	int size;
-	char infoArchivo[500],dir[40], info[500];
+	char infoArchivo[500],dir[40];
 
 
 	sprintf(dir, "%s/%s",vda,nombreArchivo);
@@ -57,16 +49,15 @@ char infoArchivo (char *vda, char *nombreArchivo){
 
 	printf("%s", infoArchivo);
 
-	//TODO	sprintf(info, "%s", acomodarInfo(infoArhivo));
 
 	fclose (archivo);
 
 
-return info;
+return infoArchivo;
 
 }
 
-void eliminarArchivo (char *vda, char *nombreArchivo){
+char* eliminarArchivo (char *vda, char *nombreArchivo){
 
 
 	char info[250];
@@ -81,11 +72,11 @@ void eliminarArchivo (char *vda, char *nombreArchivo){
 	liberarSectores (vda, infoarchivo);
 	remove(dir);
 
-return;
+return "OK";
 
 }
 
-void crearArchivo (char *vda, char *nombreArchivo){
+char* crearArchivo (char *vda, char *nombreArchivo){
 
 	FILE *archivo;
 	char dir[40];
@@ -96,29 +87,20 @@ void crearArchivo (char *vda, char *nombreArchivo){
 
 	fclose(archivo);
 
-	return;
+return "OK";
 }
 
-void actualizarTamanio (char *vda, char *nombreArchivo, long nuevoTamanio){
+char* actualizarTamanio (char *vda, char *nombreArchivo, long nuevoTamanio){
 
 	FILE *archivo;
-	int size, i=0, j=0, k=0;
+	int i=0, j=0, k=0;
 	char dir[40],infoarchivo[500],nuevo[500], nuevaInfo[500];
 
 	sprintf (dir, "%s/%s", vda,nombreArchivo);
 	printf ("direccion: %s\n", dir);
 
-
+	//Informacion del Archivo
 	sprintf(infoarchivo, "%s", infoArchivo (vda, nombreArchivo));
-/*
-	archivo = fopen (dir, "r");
-	fseek(archivo, 0, SEEK_END);
-	size = ftell(archivo);
-	rewind (archivo);
-	fgets(infoarchivo, size, archivo);
-	infoArchivo[size+1] = '\0';
-	fclose (archivo);
-*/
 
 	remove (dir);
 
@@ -163,11 +145,11 @@ void actualizarTamanio (char *vda, char *nombreArchivo, long nuevoTamanio){
 	fputs (nuevaInfo, archivo);
 	fclose (archivo);
 
-return;
+return "OK";
 
 }
 
-void crearTablaSectoresLibres (char *vda, int cantidadSectores){
+char* crearTablaSectoresLibres (char *vda, int cantidadSectores){
 
 	FILE *archivo;
 	int i=0;
@@ -186,13 +168,11 @@ void crearTablaSectoresLibres (char *vda, int cantidadSectores){
 
 	fclose (archivo);
 
-return;
+return "OK";
 
 }
 
-
-//LAS PROXIMAS NO ESTAN TESTEADAS!!!
-char dosSectoresLibres (char *vda){
+char* dosSectoresLibres (char *vda){
 
 	FILE *archivo;
 	int i=0,j;
@@ -201,16 +181,6 @@ char dosSectoresLibres (char *vda){
 	sprintf (dir, "%s/%s", vda,nombreArchivo);
 	archivo = fopen (dir, "r");
 	sprintf(infoarchivo, "%s", infoArchivo (vda, nombreArchivo));
-
-/*
-	archivo = fopen (dir, "r");
-	fseek(archivo, 0, SEEK_END);
-	size = ftell(archivo);
-	rewind (archivo);
-	fgets(infoarchivo, size, archivo);
-	infoarchivo[size+1] = '\0';
-	fclose (archivo);
-*/
 
 	while (infoarchivo[i] != "/"){
 		i++;
@@ -245,7 +215,7 @@ return sectores;
 
 }
 
-void asignarSectores (char *vda, char *nombreArchivo, char *sectores){
+char* asignarSectores (char *vda, char *nombreArchivo, char *sectores){
 
 	FILE *archivo;
 	char dir[40];
@@ -259,5 +229,35 @@ void asignarSectores (char *vda, char *nombreArchivo, char *sectores){
 
 	fclose (archivo);
 
-return;
+return "OK";
 }
+
+char* liberarSectores (char *vda, char *listaSectores){
+
+	int i=0, c=0;
+	char sectoresVda[600];
+
+
+	sprintf(sectoresVda, infoArchivo (vda,"free_sectors"));
+	printf("sectores del vda: %s\n", sectoresVda);
+
+
+	//cantidad sectores a liberar
+	while (listaSectores[i] != '\0'){
+		if ( listaSectores[i] == ',' ) {
+			c++;
+		}
+		i++;
+	}
+	c = c + 1;
+	i = 0;
+
+	printf("la lista es: %s\ncantidad sectores a liberar: %d\n", listaSectores ,c);
+
+//	while (i <= c ){
+
+//	}
+
+return "OK";
+}
+
