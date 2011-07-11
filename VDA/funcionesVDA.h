@@ -1,14 +1,13 @@
 struct buffer
 {
-char *dato1;
-char *dato2;
+char dato1[512];
+char dato2[512];
 	
 };
-
 struct info
 {
 long dirLogica;
-char dato[512];
+void *dato;
 	
 };
 struct infoGrabar
@@ -17,7 +16,6 @@ long dir1;
 char dato1[512];
 long dir2;
 char dato2[512];	
-int accion;
 };
 struct chs
 {
@@ -37,8 +35,9 @@ typedef struct nodo
 	struct nodo *proximo;
 }Nodo;
 
+void buscarSector(long, long );
 int putSectores(struct infoGrabar);
-struct buffer getSectores(long,long);
+char* getSectores(long,long);
 void crearBase(void);
 void grabarCabezal(long);
 long leerCabezal(void);
@@ -47,7 +46,7 @@ void consola(void);
 struct chs getCHS(long);
 Nodo* atenderSector(int);
 void borrar(long);
-void* leer(long);
+char* leer(long);
 void grabar(long ,void *);
 Nodo* InsertarNodo(Nodo *,Nodo *);
 Nodo* mostrarLista(Nodo *);

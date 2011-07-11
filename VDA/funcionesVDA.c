@@ -8,63 +8,10 @@
 #include <stdlib.h>
 #include <db.h>
 #pragma comment (lib, "libdb48.lib") 
-#include "funcionesLog.h"
+#include "funcionesVDA.h"
 
 int cache[10]={0,0,0,0,0,0,0,0,0,0};
-struct buffer
-{
-char *dato1;
-char *dato2;
-	
-};
-struct info
-{
-long dirLogica;
-void *dato;
-	
-};
-struct infoGrabar
-{
-long dir1;
-char dato1[512];
-long dir2;
-char dato2[512];	
-};
-struct chs
-{
-int pista;
-int sector;
-int cabezal;
-	
-};
-
-typedef struct nodo
-{	
-	int accion;
-	long dirLogica;
-	int tiempo;
-	int pista;
-	void *dato;
-	struct nodo *proximo;
-}Nodo;
-
-void buscarSector(long, long );
-int putSectores(struct infoGrabar);
-struct buffer getSectores(long,long);
-void crearBase(void);
-void grabarCabezal(long);
-long leerCabezal(void);
-void posCabezal(void);
-void consola(void);
-struct chs getCHS(long);
-Nodo* atenderSector(int);
-void borrar(long);
-char* leer(long);
-void grabar(long ,void *);
-Nodo* InsertarNodo(Nodo *,Nodo *);
-Nodo* mostrarLista(Nodo *);
-Nodo* algoritmo(Nodo *,Nodo *);
-void sectLeidos(long);
+char vda[4];
 
 Nodo* InsertarNodo(Nodo *lista,Nodo *nodito)
 {
@@ -166,8 +113,8 @@ Nodo* mostrarLista(Nodo *lista)
 {
 Nodo *ptr,*ptr2,*cabezal;
 int sumaTiempos=0,dir,opcion,esta;
-struct chs CHS;
-void *datos;
+struct chs CHS;char mensajeLog[100],auxLog[50];
+char datos[512];
 //HANDLE heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
 ptr=lista;
 //cabezal=(Nodo *)HeapAlloc(heap,HEAP_NO_SERIALIZE, sizeof(Nodo));
@@ -178,32 +125,60 @@ CHS=getCHS(dir);
 cabezal->pista=CHS.pista;
 cabezal->proximo=NULL; 
 cabezal->tiempo=0;
+
 printf("\nPosicion:%d\n",dir);
+
 while (lista!=NULL){
 		ptr=lista;
 		ptr=algoritmo(ptr,cabezal);
 		esta=buscarCache(ptr);
+
+		strcpy(mensajeLog, "Posicion Cabezal: ");
+		sprintf(auxLog,"%d",dir);
+		strcat(mensajeLog, auxLog);
+		printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
+
 		if (esta==1){
 					CHS=getCHS(ptr->dirLogica);
 					printf("\nSectores Leidos:%d - cache",CHS.sector);
+					
+					strcpy(mensajeLog, "Sectores Leidos: ");
+					sprintf(auxLog,"%d",CHS.sector);
+					strcat(mensajeLog, auxLog);
+					printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
+					
 					printf("\nTiempo consumido:%d ns",1);
-					datos=leer(ptr->dirLogica);
+
+					strcpy(mensajeLog, "Tiempo consumido: ");
+					strcat(mensajeLog,"1 ns");
+					printLog("Thread VDA","0",0,"DEBUG",mensajeLog);	
+
+					strcpy(datos,leer(ptr->dirLogica));
 					printf("\n%s\n",datos);
+					printLog("Thread VDA","0",0,"DEBUG","Cache:1 ns");
 		}else{
 			cabezal->dirLogica=ptr->dirLogica;
 			cabezal->pista=ptr->pista;
 			dir=leerCabezal();
 			CHS=getCHS(dir);
 			sumaTiempos=sumaTiempos+abs(ptr->pista-CHS.pista);
-			switch(ptr->accion){
-				case 1:
-					CHS=getCHS(ptr->dirLogica);
-					sectLeidos(ptr->dirLogica);
-					printf("\nTiempo consumido:%d ms",sumaTiempos);
-					printf("\nSector %d: %s\n",ptr->dirLogica,leer(ptr->dirLogica));
-				break;
-			}
+			CHS=getCHS(ptr->dirLogica);
+			sectLeidos(ptr->dirLogica);
+			
+			printf("\nTiempo consumido:%d ms",sumaTiempos);
+			printf("\nSector %d: %s\n",ptr->dirLogica,leer(ptr->dirLogica));
 			grabarCabezal(ptr->dirLogica+1);
+	
+			strcpy(mensajeLog, "Sectores Leidos: ");
+			sprintf(auxLog,"%d",ptr->dirLogica);
+			strcat(mensajeLog, auxLog);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
+
+			strcpy(mensajeLog, "Tiempo Cosumido: ");
+			sprintf(auxLog,"%d",sumaTiempos);
+			strcat(mensajeLog, auxLog);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
+		
 		}
 			ptr2=lista;
 			while ((ptr2->proximo!=ptr) && (ptr!=lista)){
@@ -357,7 +332,7 @@ memset(&data, 0, sizeof(DBT));
 
 char* leer(long clave){	
 DB *dbp;int ret;           
-DBT key, data; void *datos; 	
+DBT key, data; char datos[512]; 	
 memset(&key, 0, sizeof(DBT)); 
 memset(&data, 0, sizeof(DBT)); 
 	crearBase();
@@ -376,11 +351,10 @@ memset(&data, 0, sizeof(DBT));
 	}
 	
 	if(data.data==NULL){
-		datos="\0";
+		strcpy(datos,"\0");
 	}else{
-		datos=data.data;
+		strcpy(datos,data.data);
 	}
-	datos=data.data;
 	return(datos);
 	dbp->close(dbp, 0); 
 }
@@ -432,10 +406,10 @@ Nodo *nodo1;struct chs posDato;
 	nodo1->proximo=NULL;
 return(nodo1);
 }
-struct buffer getSectores(long dir1,long dir2){
+char* getSectores(long dir1,long dir2){
 
 Nodo *nodo,*nodo1=NULL,*nodo2=NULL, *lista=NULL;
-struct buffer info;				
+struct buffer info;char	mensaje[512];			
 	
 	nodo1=generarNodo(dir1);
 	nodo1->accion=2;
@@ -444,12 +418,15 @@ struct buffer info;
 	lista=InsertarNodo(lista,nodo1);
 	lista=InsertarNodo(lista,nodo2);
 	nodo=nodo1;
+	strcpy(info.dato1,leer(dir1));
+	strcpy(info.dato2,leer(dir2));
 	while(nodo!=NULL){
 		nodo=mostrarLista(lista);	
 	}
-	info.dato1=leer(dir1);
-	info.dato2=leer(dir2);
-	return(info);
+	strcpy(mensaje,info.dato1);
+	strcat(mensaje,",");
+	strcat(mensaje,info.dato2);
+	return(mensaje);
 }
 
 int putSectores(struct infoGrabar datos){
@@ -465,9 +442,9 @@ int num=0;
 	nodo2->accion=1;
 	lista=InsertarNodo(lista,nodo1);
 	lista=InsertarNodo(lista,nodo2);
-	mostrarLista(lista);	
 	grabar(datos.dir1,datos.dato1);
 	grabar(datos.dir2,datos.dato2);
+	mostrarLista(lista);	
 //	free(nodo1);free(nodo2);
 return(num);
 }
