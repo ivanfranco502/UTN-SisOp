@@ -9,14 +9,26 @@
 #include <db.h>
 #pragma comment (lib, "libdb48.lib") 
 #include "funcionesVDA.h"
+#include "funcionesMPSvda.h"
+#include "funcionesConfig.h"
 #include "funcionesLog.h"
 
+#define WIN32_LEAN_AND_MEAN
 #define SOCKET_MAX_BUFFER 100
 #define MAX_SEM_COUNT 10
+#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop) )
+#define PUERTO 21
 
 HANDLE hSemaphore; 
-
 WSADATA wsaData;
+typedef struct {
+	HANDLE socketOcupado;
+	SOCKET socketAux;
+	configVDA *config;
+	int descriptorSocketKernel;
+}argumentosThreads;
+
+struct infoGrabar Estructura(char *);
 unsigned __stdcall kss( void*);
 
 unsigned __stdcall consola1( void* pArguments )
@@ -97,7 +109,35 @@ int main()
 	int c=0;
 	unsigned threadID,threadID2;
 	HANDLE hThread,hThread2;
+	argumentosThreads *argumentos;
+	SOCKET socketAux;
+	configVDA *auxiliar;
+	char mensajeLog[100],
+		 auxLog[50],
+		 IPKSS[16];
+	unsigned puertoKSS = 5000;
+	argumentos = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(argumentosThreads));
+	socketAux = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
+	auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configVDA));
+
+	printLog("Main VDA","0",0,"DEBUG","Comienza VDA");
 	hSemaphore = CreateSemaphore(NULL,MAX_SEM_COUNT,MAX_SEM_COUNT, NULL);
+	getConfigVDA(auxiliar);
+
+	argumentos->config = auxiliar;
+
+	argumentos->socketOcupado = CreateMutex(NULL, FALSE, NULL);
+
+	/*-----------------------------------Log Config----------------------------------------*/
+	strcpy(mensajeLog, "IPKernel:");
+	strcat(mensajeLog, argumentos->config->ipKSS);
+	strcat(mensajeLog," PortKernel:");
+	sprintf(auxLog, "%d", argumentos->config->puertoKss);
+	strcat(mensajeLog, auxLog);
+	printLog("Main VDA","1",0, "INFO",mensajeLog);
+	/*--------------------------------------Fin Log Config----------------------------------*/
+
+	crearBase();
 	while(1){
 		hThread = (HANDLE)_beginthreadex( NULL, 0, &consola1, NULL, 0, &threadID );
 		hThread2 = (HANDLE)_beginthreadex( NULL, 0, &kss, NULL, 0, &threadID2 );
@@ -112,56 +152,181 @@ int main()
 
 
 unsigned __stdcall kss( void* pArguments )
-{
+{		
+		int x=0,i=0,z=0,dir1=0,dir2=0,p=0;
+		char aux[1032];
+		char Buffer[1032];
+        struct infoGrabar estructura;
+		struct buffer datos;
+		char c[10]="hola";
+        SOCKET  conn_socket;
+		char mensaje_aux[14];	
+		char stru_aux[1032];
+        char *server_name= "localhost";
+        unsigned short port = 21;
+        int retval, loopflag = 0;
+        unsigned int addr;
+        int socket_type = SOCK_STREAM;
+        struct sockaddr_in server;
+        struct hostent *hp;char mensaje[512];
+        WSADATA wsaData;
+		char mensajeLog[100],auxLog[50],IPKSS[16];
 
-    // Thread de comandos
-	long escrito;
-	struct infoGrabar buffer;
-	struct buffer datos;
-	HANDLE  heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
-	int corrector;
-	SOCKET descriptor;
-	int *remoteClient;
-	int r=-1,i, a, addrlen = sizeof(struct sockaddr_in);
+		MPS_Package *response = HeapAlloc(GetProcessHeap(),0,sizeof(MPS_Package));
+		MPS_Package *paqueteMPS = HeapAlloc(GetProcessHeap(),0,sizeof(MPS_Package));
 	
-	struct sockaddr_in *local_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
-    struct sockaddr_in *remote_address = HeapAlloc(GetProcessHeap(), 0, addrlen);
-	
-	remoteClient = (int *) HeapAlloc(GetProcessHeap(), 0, sizeof(int));
+		if ((retval = WSAStartup(0x202, &wsaData)) != 0){
+            fprintf(stderr,"VDA: WSAStartup() failed with error %d\n", retval);
+            WSACleanup();
+        }
+		
+        // detectamos si se pueden usar gethostbyname() o gethostbyaddr()
 
-	if ((a = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
-		printf("WSAStartup() devolvio error nro %d\n", a );
-		return 255;
-	}
-	
-	
-    local_address->sin_family = AF_INET;
-	local_address->sin_addr.s_addr=INADDR_ANY;
-	local_address->sin_port = htons (21);
+        if (isalpha(server_name[0])){
+			// la direccion del server es un nombre
+            hp = gethostbyname(server_name);
+        }else{ 
+			// convieto la direccion nnn.nnn a una usable
+            addr = inet_addr(server_name);
+            hp = gethostbyaddr((char *)&addr, 4, AF_INET);
+        }
 
-	descriptor= socket(AF_INET, SOCK_STREAM, 0);
-	bind (descriptor,(struct sockaddr *) local_address, addrlen);
-	listen(descriptor,100);
+        if (hp == NULL){
+			fprintf(stderr,"VDA: no encuentra direccion \"%s\": Error %d\n", server_name, WSAGetLastError());
+            WSACleanup();
+            exit(1);
+        }
 
-	while((*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen))== -1){
-		//printf("%d",*remoteClient = accept (descriptor, (struct sockaddr *)remote_address, (void*)&addrlen));
-	}
-	/* aca va el send y rcv de datos */
-	while(r!=0){
-		r=recv(*remoteClient,(void *) &buffer,sizeof(buffer),0);
-		if(r>0){
-			if(buffer.accion==0){
-				datos=getSectores(buffer.dir1,buffer.dir2);
-				send(*remoteClient,(void *)&datos,sizeof(datos),0);
-			}else{
-				WaitForSingleObject(hSemaphore,INFINITE);
-				escrito=putSectores(buffer);
-				ReleaseSemaphore(hSemaphore, 1,NULL);
-				send(*remoteClient,escrito,8,0);
+        // copio la informacion obtenida en una esrtuctura sockaddr_in
+        memset(&server, 0, sizeof(server));
+        memcpy(&(server.sin_addr), hp->h_addr, hp->h_length);
+        server.sin_family = hp->h_addrtype;
+        server.sin_port = htons(port);
+    
+
+        conn_socket = socket(AF_INET, socket_type, 0); // abro a socket
+       
+		/*-----------------------------IMPRIME Descriptor Socket---------------------*/
+		strcpy(mensajeLog, "Descriptor Socket: ");
+		sprintf(auxLog,"%d",conn_socket);
+		strcat(mensajeLog, auxLog);
+		printLog("Main VDA","0",0,"DEBUG",mensajeLog);
+		/*-------------------------------FIN--------------------------------*/
+		
+		if (conn_socket <0 ){
+            fprintf(stderr,"VDA: no pude abrir el socket: Error %d\n", WSAGetLastError());
+            WSACleanup();
+			exit(1);
+		}
+		/*-----------------------------LISTEN PORT----------------------------------*/
+		printLog("Main VDA","0",0,"DEBUG","Escuchando puerto");
+		/*---------------------------------FIN------------------------------*/
+		
+		if (connect(conn_socket, (struct sockaddr*)&server, sizeof(server)) == SOCKET_ERROR){
+            fprintf(stderr,"Connect failed: %d\n", WSAGetLastError());           
+			closesocket(conn_socket);
+           WSACleanup();
+	      _endthreadex( 0 );
+        }
+		
+		strcpy(paqueteMPS->DescriptorID,generar_DescriptorID(paqueteMPS->DescriptorID));
+		paqueteMPS->PayloadDescriptor = '3';
+		paqueteMPS->PayloadLenght = 0;
+		strcpy(paqueteMPS->Payload,"\0");
+
+		send(conn_socket, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
+	
+		strcpy(paqueteMPS->Payload,"VDA1");
+		paqueteMPS->PayloadLenght = 4;
+
+		send(conn_socket, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
+		
+		recv(conn_socket,(char *) Buffer, sizeof(Buffer),0);
+		response = (MPS_Package *)Buffer;
+		
+		if(response->PayloadDescriptor == '0'){
+			perror("Error Autenticacion Handshake");
+		    closesocket(conn_socket);
+           WSACleanup();
+	      _endthreadex( 0 );
+		}
+		
+		
+		while(c!="no"){ 
+			recv(conn_socket,(char *) Buffer, sizeof(Buffer),0);
+			strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,11);
+			mensaje_aux[11]='\0';
+			if (!strcmp(mensaje_aux,"putSectores")){
+				//es putsectores
+				for(i=12;i<1045;i++){
+					stru_aux[i-12]=((MPS_Package*)Buffer)->Payload[i];
+				}
+				estructura=Estructura(stru_aux);
+				putSectores(estructura);
+				strcpy(paqueteMPS->Payload,"ok");
+				paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
+				send(conn_socket, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
 			}
-		}	
-	}
-	HeapDestroy(heap);
-    _endthreadex( 0 );
+			else{
+				if (!strcmp(mensaje_aux,"getSectores")){//es get sectores
+					for(i=12;i<1045;i++){
+						stru_aux[i-12]=((MPS_Package*)Buffer)->Payload[i];
+					}
+					while(stru_aux[x-1]!=')'){
+						while(stru_aux[x]!=',' && stru_aux[x]!=')'){
+							aux[p]=stru_aux[x];	
+							p++;x++;
+						}
+						aux[p]='\0';
+						if(z==0){
+							dir1=atoi(aux);
+							p=0;
+						}
+						if(z==1){
+							dir2=atoi(aux);
+							p=0;
+						}
+						z++;x++;
+					}
+				//strcpy(datos,getSectores(dir1,dir2);
+				strcpy(paqueteMPS->Payload,getSectores(dir1,dir2));
+				paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
+				send(conn_socket, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
+				}
+			}
+		}
+      
+        closesocket(conn_socket);
+        WSACleanup();
+	_endthreadex( 0 );
+}
 
+struct infoGrabar Estructura(char *stru){
+	int x=0,i=0,z=0;struct infoGrabar estructura;
+	char aux[1032];
+	while(stru[x-1]!=')'){
+		while(stru[x]!=',' && stru[x]!=')'){
+		aux[i]=stru[x];	
+		i++;x++;
+		}
+		aux[i]='\0';
+		if(z==0){
+			estructura.dir1=atoi(aux);
+			i=0;
+		}
+		if(z==1){
+			strcpy(estructura.dato1,aux);
+			i=0;
+		}
+		if(z==2){
+			estructura.dir2=atoi(aux);
+			i=0;
+		}
+		if(z==3){
+			strcpy(estructura.dato2,aux);
+			i=0;
+		}
+		z++;x++;
+	}
+return(estructura);
 }
