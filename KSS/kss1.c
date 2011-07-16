@@ -316,7 +316,7 @@ nodo_lista_sockets* atender_handshake(nodo_lista_sockets* nodo, nodo_lista_socke
 	nodo_lista_sockets* aux;
 	nodo_lista_sockets* aux2;
 	char buff[1072];
-	MPS_Package* mensaje;
+	MPS_Package* mensaje, *mensajeVDA;
 	nodo_lista_sockets* p_ant;
  	nodo_lista_sockets* p_sig;
 
@@ -359,6 +359,13 @@ nodo_lista_sockets* atender_handshake(nodo_lista_sockets* nodo, nodo_lista_socke
 			break;
 		case '3': //no puede haber dos vdas con el mismo nombre
 			respuesta = 1;
+			mensajeVDA=(MPS_Package*)malloc (sizeof(MPS_Package));
+			strcpy(mensajeVDA->DescriptorID,Buffer->DescriptorID);
+			mensajeVDA->PayloadDescriptor='1';			
+			strcpy(mensajeVDA->Payload,"Mandame el nombre");
+			mensajeVDA->PayloadLenght=strlen(mensajeVDA->Payload);
+			send(nodo->socket,(char *)mensajeVDA,21+mensajeVDA->PayloadLenght+1,0);	//le pido el nombre de la VDA
+			free(mensajeVDA);
 			recv(nodo->socket,buff, sizeof(buff),0);
 			while(aux != NULL){
 				if(!strcmp(aux->nombre, ((MPS_Package*)buff)->Payload)){
