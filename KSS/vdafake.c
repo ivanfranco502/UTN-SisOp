@@ -82,7 +82,8 @@ int main(void){
 	printf("Iniciando Handshake..\n");
 		
         send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
-
+		recv(s, Buffer, sizeof(Buffer),0);
+	if(!strcmp(((MPS_Package*)Buffer)->Payload, "Mandame el nombre")){
 	do{
 		printf("Coloca el nombre de la VDA: ");			//identifico VDA
 		gets(mensaje->Payload);
@@ -92,7 +93,7 @@ int main(void){
 	send(s,(char*)mensaje,21+mensaje->PayloadLenght+1,0);
 	recv(s,Buffer,sizeof(Buffer),0);
 	print_pkg((MPS_Package*)Buffer);
-
+	
 
 	if (((MPS_Package*)Buffer)->PayloadDescriptor=='0'){
 	printf("Handshake Failed \n");
@@ -148,6 +149,7 @@ int main(void){
 //                	}
 
 		}
+	}
 	}
 	close(s);
 

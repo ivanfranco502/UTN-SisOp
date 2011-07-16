@@ -401,11 +401,13 @@ nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 			nodo_aux=nodo_aux->siguiente;
 		}
 		rellenar_sectores(sectores, tamanio_archivo);
+		printf("rellene los sectores\n");
 		memcpy(nodo_aux->buffer, sectores, tamanio_archivo);
 // 3) llamar a sysflush
 		respuesta_sys_flush = sys_flush(Tdd, lista_sockets, socket, desc, desc_tdd);
 // 4) actualizar tamanio en la TDD
 		if(respuesta_sys_flush){
+			printf("el sys flush me respondio bien\n");
 			nodo_aux->size += tamanio_archivo;
 // 5) responder al ftp
 			mensaje->PayloadDescriptor = '1';
@@ -647,9 +649,10 @@ nodoTDD* sys_list(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 // SI EL PARAMETRO ES /VDAx
 // enviar lista de archivos con su tamaño
 		i=0;
-		for(i;i<6;i++){
+		for(i;i<4;i++){
 			vda_pedida[i]=argumento[i+1];
 		}
+		vda_pedida[4] = '\0';
 		//pedirle al fss
 		mensaje->PayloadDescriptor = '9';
 		strcat(mensaje->Payload, "listarDirectorio(");
