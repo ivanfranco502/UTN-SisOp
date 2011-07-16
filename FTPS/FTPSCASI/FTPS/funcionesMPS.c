@@ -66,7 +66,7 @@ int conectarConKernel(char *IPKSS, unsigned puertoKSS, MPS_Package *paqueteMPS){
 	paqueteMPS->PayloadLenght = 0;
 	strcpy(paqueteMPS->Payload,"\0");
 
-	send(desc, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
+	send(desc, (char *)paqueteMPS, 21 + paqueteMPS->PayloadLenght+1,0);
 	
 	//listen(desc,100);
 	recv(desc, Buffer, sizeof(Buffer),0);
