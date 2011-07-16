@@ -60,7 +60,6 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	strcpy(datos_cliente->IP, argumentosRecibidos->config->IPServer);
 	datos_cliente->puerto_datos = argumentosRecibidos->config->puertoServer;
 	datos_cliente->socketKSS = argumentosRecibidos->descriptorSocketKernel;
-	strcpy(datos_cliente->ftp_path,"/");
 
 	datos_cliente->thDatosOK = 0;
 	datos_cliente->socketOcupado = argumentosRecibidos->socketOcupado;
@@ -152,6 +151,7 @@ int main(){
 	/*--------------------------------------Fin Log Config----------------------------------*/
 
 	argumentos->descriptorSocketKernel = conectarConKernel(argumentos->config->IPKernel, argumentos->config->puertoKernel, paqueteKSS);
+	printf("%c", paqueteKSS->PayloadDescriptor);
 	if(argumentos->descriptorSocketKernel != -1){
 		paraElMain(vector_comandos);
 		
@@ -195,7 +195,7 @@ int main(){
 				strcpy(mensajeLog, "Conexion Nuevo cliente al puerto ftp: ");
 				sprintf(auxLog,"%d", socketAux);
 				strcat(mensajeLog,auxLog);
-				printLog("Main FTP","0",0,"ERROR",mensajeLog);
+				printLog("Main FTP","0",0,"DEBUG",mensajeLog);
 				/*---------------------------------------------------------------*/
 			}
 

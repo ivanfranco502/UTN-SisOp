@@ -97,7 +97,7 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	
 	/*---------------------------------------------------------------*/
 	strcpy(mensajeLog, "Nuevo Cliente Descriptor ");
-	sprintf(auxLog, "d", clienteDatos);
+	sprintf(auxLog, "%d", clienteDatos);
 	strcat(mensajeLog,auxLog);
 	printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG",mensajeLog);
 	printLog("Thread Datos", "2",datos_cliente->threadID,"DEBUG","Acepte Cliente");
@@ -131,8 +131,8 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 					memcpy(bufferDinamico + contadorBuffer, bufferAuxiliar, 1024);
 					contador++;
 					contadorBuffer = contadorBuffer + 1024;
-				}while((datos_cliente->thDatosOK == 1) && (sizeof(bufferAuxiliar) == 1024));
-				send (clienteDatos, bufferDinamico, sizeof(bufferDinamico), 0);
+				}while((datos_cliente->thDatosOK == 1) && (contadorBuffer%1024 == 0));
+				send (clienteDatos, bufferDinamico, contadorBuffer+1, 0);
 				if(resultadoOperacion){
 					resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
 					if(resultadoOperacion){
@@ -438,7 +438,9 @@ int rta_STOR (char *Response, char *arg, reg_cliente *datos_cliente){
 }
 
 int rta_USER (char *Response, char *arg,reg_cliente *datos_cliente){
-	strcpy(Response, "230 Usuario anonimo logueado");
+	strcpy(Response, "230 Usuario ");
+	strcat(Response, arg);
+	strcat(Response, " logueado");
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
