@@ -363,7 +363,7 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 
 nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 	unsigned int desc_tdd;
-	char sectores[1025];
+	char sectores[1024];
 	nodoTDD* nodo_aux;
 	long tamanio_archivo;
 	MPS_Package *mensaje;
@@ -384,11 +384,12 @@ nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 	desctdd[i]='\0';
 	sscanf(desctdd, "%u", &desc_tdd);
 	i++;
+	tamanio_archivo = lenght-i-11;
 	printf("llega al memcpy\n");
-	memcpy(sectores, argumento+i, lenght-i);
+	memcpy(sectores, argumento+i, tamanio_archivo);
 	printf("pasa al memcpy\n");
 
-	tamanio_archivo = lenght-i;
+	
 	
 	
 	
@@ -416,7 +417,7 @@ nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 			send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
 		}
 		else{
-			exit(1);
+			return(Tdd);
 		}
 	}
 	else{
