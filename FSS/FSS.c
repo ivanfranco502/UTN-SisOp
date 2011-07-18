@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 
 #define SOCK_PATH "echo_socket"
+#define MAX_BLOQUES 400
 
 
 
@@ -350,28 +351,26 @@ char* obtenerFuncion(char f[50]){
 	func[x]='\0';
 return func;
 }
+
 char* existeArchivo (char *vda, char *nombreArchivo){
 
 	FILE *archivo;
-	char no[20]="NO", ok[20]="OK",dir[40];
+	char dir[60];
 
 	sprintf(dir, "%s/%s",vda,nombreArchivo);
 
 	archivo = fopen(dir,"r");
 	if (archivo==NULL){
-		printf("%s",no);
-		return *no;
+		return "NO";
 	}
 
 	fclose (archivo);
-	printf("%s",ok );
 
-return *ok;
+return "OK";
 
 }
 
 char* infoArchivo (char *vda, char *nombreArchivo){
-
 
 
 	FILE *archivo;
@@ -404,17 +403,27 @@ return infoArchivo;
 
 char* eliminarArchivo (char *vda, char *nombreArchivo){
 
+	int i=0,j=0;
+	char dir[40],info[500], listaSectores[500];
 
-	char info[250];
-	char dir[40], infoarchivo[500];
+	sprintf(info, "%s", infoArchivo (vda, nombreArchivo));
 
-	sprintf(infoarchivo, "%s", infoArchivo (vda, nombreArchivo));
+	while (info[i] != ','){
+		i++;
+	}
 
-	printf("%s \n", info);
+	i++;
 
+	while (info[i] != '\0'){
+		listaSectores[j]=info[i];
+		i++;
+		j++;
+	}
+
+	listaSectores[j]='\0';
+
+	liberarSectores (vda, listaSectores);
 	sprintf(dir, "%s/%s",vda,nombreArchivo);
-
-	liberarSectores (vda, infoarchivo);
 	remove(dir);
 
 return "OK";
@@ -435,57 +444,48 @@ char* crearArchivo (char *vda, char *nombreArchivo){
 return "OK";
 }
 
-char* actualizarTamanio (char *vda, char *nombreArchivo, long nuevoTamanio){
+char* actualizarTamanio (char* vda, char* nombreArchivo, long actualiza){
 
 	FILE *archivo;
 	int i=0, j=0, k=0;
-	char dir[40],infoarchivo[500],nuevo[500], nuevaInfo[500];
+	char info[500], nuevaInfo[500], tamanio[40], dir[100];
 
-	sprintf (dir, "%s/%s", vda,nombreArchivo);
-	printf ("direccion: %s\n", dir);
+	sprintf (info, "%s", infoArchivo ( vda, nombreArchivo ) );
+	printf ("Info Antes: %s\n", info);
 
-	//Informacion del Archivo
-	sprintf(infoarchivo, "%s", infoArchivo (vda, nombreArchivo));
+	snprintf (tamanio, 20, "%d", actualiza);
+	printf ("Tamanio Nuevo: %s\n", tamanio);
 
-	remove (dir);
-
-	printf ("Info del Archivo antes:   %s\n",infoarchivo);
-
-	snprintf (nuevo, sizeof(nuevo), "%d", nuevoTamanio);
-	printf ("Tamanio Nuevo:    %s\n",nuevo);
-
-	//longitud viejo tamanio
-	while (infoarchivo[i] != '/'){
+	//Longitud Anterior
+	while (info[i] != ','){
 		i++;
 	}
-	printf("Longitud VIEJO:%d\n",i);
+	printf ("Longitud Tamanio anterior: %d\n", i);
 
-	//longitud nuevo tamanio
-	while (nuevo[j] != '\0'){
+	//Longitud Nueva
+	while (tamanio[j] != '\0'){
 		j++;
 	}
-	printf("Longitud NUEVO:%d\n",j);
+	printf ("Longitud Tamanio nueva: %d\n", j);
 
-
-	while (k<=j){
-		nuevaInfo[k]=nuevo[k];
+	//Lleno Nueva Info
+	while (k<j){
+		nuevaInfo[k]=tamanio[k];
 		k++;
 	}
 
-//TODO: a partir de aca hay algo q no funca!
-
-	nuevaInfo[k] = '/';
-
-
-
-	while (infoarchivo[i] != '\0'){
-		nuevaInfo[k]=infoarchivo[i];
+	while (info[i] != '\0'){
+		nuevaInfo[k]=info[i];
 		i++;
 		k++;
 	}
+	nuevaInfo[k] = '\0';
 
-	printf ("NUEVA INFO: %s\n",nuevaInfo);
+	printf("Nueva Info: %s\n",nuevaInfo);
 
+	//Agrego Nueva Info Al Archivo
+	sprintf(dir, "%s/%s",vda,nombreArchivo);
+	remove (dir);
 	archivo = fopen( dir,"w");
 	fputs (nuevaInfo, archivo);
 	fclose (archivo);
@@ -498,7 +498,7 @@ char* crearTablaSectoresLibres (char *vda, int cantidadSectores){
 
 	FILE *archivo;
 	int i=0;
-	char array[cantidadSectores-1], dir[40];
+	char array[cantidadSectores], dir[40];
 
 
 
@@ -506,9 +506,10 @@ char* crearTablaSectoresLibres (char *vda, int cantidadSectores){
 		array[i]='0';
 		i++;
 	}
+	array[i]='\0';
 
 	sprintf (dir, "%s/free_sectors",vda);
-	archivo = fopen(dir,"w+");
+	archivo = fopen(dir,"w");
 	fputs (array, archivo);
 
 	fclose (archivo);
@@ -521,57 +522,79 @@ char* dosSectoresLibres (char *vda){
 
 	FILE *archivo;
 	int i=0,j;
-	char dir[40],infoarchivo[500], sectores[20],nombreArchivo[]="free_sectors";
+	char dir[40],info[500], sectores[10],nombreArchivo[]="free_sectors";
 
-	sprintf (dir, "%s/%s", vda,nombreArchivo);
-	archivo = fopen (dir, "r");
-	sprintf(infoarchivo, "%s", infoArchivo (vda, nombreArchivo));
+	sprintf(info, "%s", infoArchivo (vda, nombreArchivo));
 
-	while (infoarchivo[i] != "/"){
+	while ( (info[i] == '1') && (info[i] != '\0') ){
 		i++;
 	}
 
-	if (infoarchivo[i]=="/"){
-		i++;
-	}
-
-	while (infoarchivo[i] != "0"){
-		i++;
-	}
-
-	if (infoarchivo == '\0'){
+	if (info[i] == '\0'){
 		printf ("NO HAY SUFICIENTES SECTORES LIBRES\n");
+		return "NO";
 	}
+	printf("Primer Sector Libre: %d\n",i);
 
-	j = i;
-	while (infoarchivo[j] != "0"){
+	j = i + 1;
+
+	while ( (info[j] == '1') && (info[j] != '\0') ){
 		j++;
 	}
 
-	if (infoarchivo == '\0'){
+	if (info[j] == '\0'){
 		printf ("NO HAY SUFICIENTES SECTORES LIBRES\n");
+		return "NO";
 	}
 
-	snprintf (sectores, sizeof(sectores), "%d,%d", i,j);
+	printf("Segundo Sector Libre: %d\n",j);
 
-	printf ("sectores: %s", sectores);
+	//Actualizo free_sectors
+	info[i]='1';
+	info[j]='1';
+	sprintf(dir, "%s/%s", vda, nombreArchivo);
+	remove (dir);
+	archivo = fopen( dir,"w");
+	fputs (info, archivo);
+	fclose (archivo);
+
+	snprintf (sectores, 10, "%d,%d", i,j);
+	printf ("Sectores: %s\n", sectores);
 
 return sectores;
-
 }
 
 char* asignarSectores (char *vda, char *nombreArchivo, char *sectores){
 
 	FILE *archivo;
-	char dir[40];
+	int i=0,j=0;
+	char dir[40], info[500];
+
+	sprintf(info, "%s",infoArchivo(vda, nombreArchivo));
+
+	while (info[i] != '\0'){
+		i++;
+	}
+
+	info[i] = ',';
+	i++;
+
+
+
+	while (sectores[j] != '\0'){
+		info[i]=sectores[j];
+		i++;
+		j++;
+	}
+	info[i]='\0';
+
+//	printf("info con sectores asignados: %s\n",info);
+
 
 	sprintf (dir, "%s/%s", vda,nombreArchivo);
-	archivo = fopen (dir, "a+");
-	fseek(archivo, 0, SEEK_END);
-
-	fputs (",",archivo);
-	fputs (sectores,archivo);
-
+	remove (dir);
+	archivo = fopen (dir, "w");
+	fputs (info, archivo);
 	fclose (archivo);
 
 return "OK";
@@ -579,8 +602,9 @@ return "OK";
 
 char* liberarSectores (char *vda, char *listaSectores){
 
-	int i=0, c=0;
-	char sectoresVda[600];
+	FILE *archivo;
+	int i=0, c=0,j=0, k, sec;
+	char sectoresVda[MAX_BLOQUES], sector[6], dir[50];
 
 
 	sprintf(sectoresVda, infoArchivo (vda,"free_sectors"));
@@ -599,10 +623,47 @@ char* liberarSectores (char *vda, char *listaSectores){
 
 	printf("la lista es: %s\ncantidad sectores a liberar: %d\n", listaSectores ,c);
 
-//	while (i <= c ){
+	while (j < c ){
 
-//	}
+		k=0;
+
+		while ((listaSectores[i] != ',') && (listaSectores[i] != '\0') ){
+			sector[k] = listaSectores[i];
+			i++;
+			k++;
+		}
+
+		sscanf (sector, "%d", &sec);
+		printf("sector: %d\n",sec);
+		sectoresVda[sec] = '0';
+		i++;
+		j++;
+
+	}
+
+	printf("Sectores Cambiados: %s\n", sectoresVda);
+
+	sprintf(dir, "%s/%s",vda,"free_sectors");
+	remove (dir);
+	archivo = fopen( dir,"w");
+	fputs (sectoresVda, archivo);
+	fclose (archivo);
 
 return "OK";
+
 }
 
+char* formatear (char* vda, int cantidadSectores){
+
+	char command1[40], command2[40];
+
+	sprintf(command1, "rm -r %s", vda);
+	system (command1);
+	sprintf (command2, "mkdir %s", vda);
+	system(command2);
+
+	crearTablaSectoresLibres(vda, cantidadSectores);
+
+return "OK";
+
+}
