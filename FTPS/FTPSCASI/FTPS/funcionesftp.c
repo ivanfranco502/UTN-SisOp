@@ -44,9 +44,7 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	char port[6];
 	char mensajeLog[100],
 		 auxLog[50];
-	char bufferAuxiliar[1025],
-		 message[1024],
-		 *bufferDinamico = HeapAlloc(heapDatos, 0, 1024);
+	char message[1024];
 	unsigned puerto = 1025;
 	struct sockaddr_in *local_address = HeapAlloc(heapDatos, 0, addrlen);
     struct sockaddr_in *remote_address = HeapAlloc(heapDatos, 0, addrlen);
@@ -119,27 +117,17 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 			//send (clienteDatos, datos_cliente->buffer, strlen(datos_cliente->buffer), 0);	
 			fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "0");
 			if(fileDescriptor > -1){
-				do{
-					memcpy(bufferAuxiliar, enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS), 1024);
-					resultadoOperacion = (strcmp(bufferAuxiliar, "")!= 0);
-					if(resultadoOperacion){
-						datos_cliente->thDatosOK = 1;
-					}else{
-						datos_cliente->thDatosOK = 0;
-					}
-					*bufferDinamico = HeapReAlloc(heapDatos, NULL, *bufferDinamico, 1024 * contador);
-					memcpy(bufferDinamico + contadorBuffer, bufferAuxiliar, 1024);
-					contador++;
-					contadorBuffer = contadorBuffer + 1024;
-				}while((datos_cliente->thDatosOK == 1) && (contadorBuffer%1024 == 0));
-				send (clienteDatos, bufferDinamico, contadorBuffer+1, 0);
+				resultadoOperacion = enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS, clienteDatos);
 				if(resultadoOperacion){
-					resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
-					if(resultadoOperacion){
-						printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
-					}else{
-						printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close Fallo");
-					}
+					datos_cliente->thDatosOK = 1;
+				}else{
+					datos_cliente->thDatosOK = 0;
+				}
+				resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+				if(resultadoOperacion){
+					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+				}else{
+					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close Fallo");
 				}
 			}else{
 				datos_cliente->thDatosOK = 0;
@@ -157,35 +145,18 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 	
 //			send(datos_cliente->socket_comando, "150 Opening BINARY mode" , strlen("150 Opening BINARY mode"),0);
 			fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "1");
-				if(fileDescriptor > -1){
-					do{
-						cantidadBytes = recv (clienteDatos, bufferAuxiliar, 1024, 0);
-
-						/*---------------------------------------------------------------*/
-						strcpy(mensajeLog, "Llego ");
-						//memcpy(auxLog, bufferAuxiliar, 1024);
-						//strcat(mensajeLog,auxLog);
-						printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG",mensajeLog);
-						/*---------------------------------------------------------------*/
-
-						resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, bufferAuxiliar);
-						if(resultadoOperacion){
-							datos_cliente->thDatosOK = 1;
-						}else{
-							datos_cliente->thDatosOK = 0;
-						}
-					}while((datos_cliente->thDatosOK == 1) && (cantidadBytes == 1024));
-					if(resultadoOperacion){
-						resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
-						if(resultadoOperacion){
-							printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
-						}else{
-							printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close Fallo");
-						}
-					}
-				}else{
-					datos_cliente->thDatosOK = 0;
-				}
+			resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, clienteDatos);
+			if(resultadoOperacion){
+				datos_cliente->thDatosOK = 1;
+			}else{
+				datos_cliente->thDatosOK = 0;
+			}
+			resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+			if(resultadoOperacion){
+				printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+			}else{
+				printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close Fallo");
+			}
 
 			/*---------------------------------------------------------------*/
 			printLog("Thread Datos", "2", datos_cliente->threadID,"DEBUG","Paso el Recv");
