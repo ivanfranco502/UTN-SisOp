@@ -11,3 +11,4 @@ char* crearTablaSectoresLibres (char *vda, int cantidadSectores);
 char* dosSectoresLibres (char *vda);
 char* asignarSectores (char *vda, char *nombreArchivo, char *sectores);
 char* liberarSectores (char *vda, char *listaSectores);
+char* formatear (char* vda, int cantidadSectores);
