@@ -36,7 +36,7 @@ typedef struct nodo
 }Nodo;
 
 void buscarSector(long, long );
-int putSectores(struct infoGrabar);
+int putSectores(struct infoGrabar *);
 char* getSectores(long,long);
 void crearBase(void);
 void grabarCabezal(long);
