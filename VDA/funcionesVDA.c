@@ -82,6 +82,7 @@ void sectLeidos(long dirLogica){
 	long cabezal;
 	struct chs cabCHS,dirCHS; 
 	
+	dirLogica=abs(dirLogica);
 	cabezal=leerCabezal();
 	cabCHS=getCHS(cabezal);
 	dirCHS=getCHS(dirLogica);
@@ -154,6 +155,7 @@ while (lista!=NULL){
 					printLog("Thread VDA","0",0,"DEBUG",mensajeLog);	
 
 					strcpy(datos,leer(ptr->dirLogica));
+					strcat(datos,"\0");
 					printf("\n%s\n",datos);
 					printLog("Thread VDA","0",0,"DEBUG","Cache:1 ns");
 		}else{
@@ -353,7 +355,7 @@ memset(&data, 0, sizeof(DBT));
 	if(data.data==NULL){
 		strcpy(datos,"\0");
 	}else{
-		strcpy(datos,data.data);
+		memcpy(datos,data.data,512);
 	}
 	return(datos);
 	dbp->close(dbp, 0); 
@@ -409,7 +411,7 @@ return(nodo1);
 char* getSectores(long dir1,long dir2){
 
 Nodo *nodo,*nodo1=NULL,*nodo2=NULL, *lista=NULL;
-struct buffer info;char	mensaje[512];			
+struct buffer info;char	mensaje[1024];			
 	
 	nodo1=generarNodo(dir1);
 	nodo1->accion=2;
@@ -418,32 +420,29 @@ struct buffer info;char	mensaje[512];
 	lista=InsertarNodo(lista,nodo1);
 	lista=InsertarNodo(lista,nodo2);
 	nodo=nodo1;
-	strcpy(info.dato1,leer(dir1));
-	strcpy(info.dato2,leer(dir2));
+	memcpy(info.dato1,leer(dir1),512);
+	memcpy(info.dato2,leer(dir2),512);
 	while(nodo!=NULL){
 		nodo=mostrarLista(lista);	
 	}
-	strcpy(mensaje,info.dato1);
-	strcat(mensaje,",");
-	strcat(mensaje,info.dato2);
+	memcpy(mensaje,info.dato1,512);
+	memcpy(mensaje+512,info.dato2,512);
 	return(mensaje);
 }
 
-int putSectores(struct infoGrabar datos){
+int putSectores(struct infoGrabar *datos){
 
 Nodo *nodo1=NULL,*nodo2=NULL,*lista=NULL,*nodo;
 
 int num=0;
-	nodo1=generarNodo(datos.dir1);
-	nodo1->accion=1;
-	nodo1->dato=datos.dato1;
-	nodo2=generarNodo(datos.dir2);
-	nodo2->dato=datos.dato2;
-	nodo2->accion=1;
+	nodo1=generarNodo(datos->dir1);
+	nodo1->dato=datos->dato1;
+	nodo2=generarNodo(datos->dir2);
+	nodo2->dato=datos->dato2;
 	lista=InsertarNodo(lista,nodo1);
 	lista=InsertarNodo(lista,nodo2);
-	grabar(datos.dir1,datos.dato1);
-	grabar(datos.dir2,datos.dato2);
+	grabar(datos->dir1,datos->dato1);
+	grabar(datos->dir2,datos->dato2);
 	mostrarLista(lista);	
 //	free(nodo1);free(nodo2);
 return(num);

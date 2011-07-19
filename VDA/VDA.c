@@ -28,7 +28,7 @@ typedef struct {
 	int descriptorSocketKernel;
 }argumentosThreads;
 
-struct infoGrabar Estructura(char *);
+struct infoGrabar* Estructura(char *);
 unsigned __stdcall kss( void*);
 
 unsigned __stdcall consola1( void* pArguments )
@@ -109,35 +109,11 @@ int main()
 	int c=0;
 	unsigned threadID,threadID2;
 	HANDLE hThread,hThread2;
-	argumentosThreads *argumentos;
-	SOCKET socketAux;
-	configVDA *auxiliar;
-	char mensajeLog[100],
-		 auxLog[50],
-		 IPKSS[16];
-	unsigned puertoKSS = 5000;
-	argumentos = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(argumentosThreads));
-	socketAux = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
-	auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configVDA));
 
-	printLog("Main VDA","0",0,"DEBUG","Comienza VDA");
 	hSemaphore = CreateSemaphore(NULL,MAX_SEM_COUNT,MAX_SEM_COUNT, NULL);
-	getConfigVDA(auxiliar);
-
-	argumentos->config = auxiliar;
-
-	argumentos->socketOcupado = CreateMutex(NULL, FALSE, NULL);
-
-	/*-----------------------------------Log Config----------------------------------------*/
-	strcpy(mensajeLog, "IPKernel:");
-	strcat(mensajeLog, argumentos->config->ipKSS);
-	strcat(mensajeLog," PortKernel:");
-	sprintf(auxLog, "%d", argumentos->config->puertoKss);
-	strcat(mensajeLog, auxLog);
-	printLog("Main VDA","1",0, "INFO",mensajeLog);
-	/*--------------------------------------Fin Log Config----------------------------------*/
 
 	crearBase();
+
 	while(1){
 		hThread = (HANDLE)_beginthreadex( NULL, 0, &consola1, NULL, 0, &threadID );
 		hThread2 = (HANDLE)_beginthreadex( NULL, 0, &kss, NULL, 0, &threadID2 );
@@ -156,7 +132,7 @@ unsigned __stdcall kss( void* pArguments )
 		int x=0,i=0,z=0,dir1=0,dir2=0,p=0;
 		char aux[1032];
 		char Buffer[1032];
-        struct infoGrabar estructura;
+        struct infoGrabar *estructura;
 		struct buffer datos;
 		char c[10]="hola";
         SOCKET  conn_socket;
@@ -171,9 +147,36 @@ unsigned __stdcall kss( void* pArguments )
         struct hostent *hp;char mensaje[512];
         WSADATA wsaData;
 		char mensajeLog[100],auxLog[50],IPKSS[16];
+		struct chs *CHS;			
+		argumentosThreads *argumentos;
+		SOCKET socketAux;
+		configVDA *auxiliar;
+		unsigned puertoKSS = 5000;
 
 		MPS_Package *response = HeapAlloc(GetProcessHeap(),0,sizeof(MPS_Package));
 		MPS_Package *paqueteMPS = HeapAlloc(GetProcessHeap(),0,sizeof(MPS_Package));
+	
+		argumentos = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(argumentosThreads));
+		socketAux = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
+		auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configVDA));
+
+
+		printLog("Main VDA","0",0,"DEBUG","Comienza VDA");
+	
+		getConfigVDA(auxiliar);
+
+		argumentos->config = auxiliar;
+
+		argumentos->socketOcupado = CreateMutex(NULL, FALSE, NULL);
+
+		/*-----------------------------------Log Config----------------------------------------*/
+		strcpy(mensajeLog, "IPKernel:");
+		strcat(mensajeLog, argumentos->config->ipKSS);
+		strcat(mensajeLog," PortKernel:");
+		sprintf(auxLog, "%d", argumentos->config->puertoKss);
+		strcat(mensajeLog, auxLog);
+		printLog("Main VDA","1",0, "INFO",mensajeLog);
+		/*--------------------------------------Fin Log Config----------------------------------*/
 	
 		if ((retval = WSAStartup(0x202, &wsaData)) != 0){
             fprintf(stderr,"VDA: WSAStartup() failed with error %d\n", retval);
@@ -199,9 +202,9 @@ unsigned __stdcall kss( void* pArguments )
 
         // copio la informacion obtenida en una esrtuctura sockaddr_in
         memset(&server, 0, sizeof(server));
-        memcpy(&(server.sin_addr), hp->h_addr, hp->h_length);
-        server.sin_family = hp->h_addrtype;
-        server.sin_port = htons(port);
+		server.sin_addr.s_addr=inet_addr("192.168.1.38");
+        server.sin_family = AF_INET;
+        server.sin_port = htons(5300);
     
 
         conn_socket = socket(AF_INET, socket_type, 0); // abro a socket
@@ -234,12 +237,14 @@ unsigned __stdcall kss( void* pArguments )
 		paqueteMPS->PayloadLenght = 0;
 		strcpy(paqueteMPS->Payload,"\0");
 
-		send(conn_socket, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
+		send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
 	
+		recv(conn_socket,(char *) Buffer, sizeof(Buffer),0);
+		
 		strcpy(paqueteMPS->Payload,"VDA1");
 		paqueteMPS->PayloadLenght = 4;
-
-		send(conn_socket, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
+		
+		send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
 		
 		recv(conn_socket,(char *) Buffer, sizeof(Buffer),0);
 		response = (MPS_Package *)Buffer;
@@ -252,20 +257,33 @@ unsigned __stdcall kss( void* pArguments )
 		}
 		
 		
-		while(c!="no"){ 
+		while(1){ 
 			recv(conn_socket,(char *) Buffer, sizeof(Buffer),0);
-			strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,11);
-			mensaje_aux[11]='\0';
+			strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,3);
+			if (!strcmp(mensaje_aux,"CHS")){
+			//	memcpy(paqueteMPS->Payload,,12);
+			//	paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
+			send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);	
+			}else{
+				strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,11);
+				mensaje_aux[11]='\0';
+			}
 			if (!strcmp(mensaje_aux,"putSectores")){
 				//es putsectores
 				for(i=12;i<1045;i++){
 					stru_aux[i-12]=((MPS_Package*)Buffer)->Payload[i];
 				}
-				estructura=Estructura(stru_aux);
-				putSectores(estructura);
-				strcpy(paqueteMPS->Payload,"ok");
-				paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
-				send(conn_socket, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
+				estructura = (struct infoGrabar*)stru_aux;
+				if(estructura->dir1>20000 || estructura->dir2>20000){
+					strcpy(paqueteMPS->Payload,"No existe ese Sector!!");
+					paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
+					send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
+				}else{
+					putSectores(estructura);
+					strcpy(paqueteMPS->Payload,"OK");
+					paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
+					send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
+				}
 			}
 			else{
 				if (!strcmp(mensaje_aux,"getSectores")){//es get sectores
@@ -289,10 +307,15 @@ unsigned __stdcall kss( void* pArguments )
 						z++;x++;
 					}
 				//strcpy(datos,getSectores(dir1,dir2);
-				strcpy(paqueteMPS->Payload,getSectores(dir1,dir2));
+				memcpy(paqueteMPS->Payload,getSectores(dir1,dir2),1024);
 				paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
-				send(conn_socket, (char *)paqueteMPS,sizeof(MPS_Package)+1,0);
+				send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
 				}
+			}
+			if (strcmp(mensaje_aux,"getSectores") && strcmp(mensaje_aux,"putSectores") && strcmp(mensaje_aux,"CHS")){
+					strcpy(paqueteMPS->Payload,"No existe ese comando!!");
+					paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
+					send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
 			}
 		}
       
@@ -301,8 +324,8 @@ unsigned __stdcall kss( void* pArguments )
 	_endthreadex( 0 );
 }
 
-struct infoGrabar Estructura(char *stru){
-	int x=0,i=0,z=0;struct infoGrabar estructura;
+struct infoGrabar* Estructura(char *stru){
+	int x=0,i=0,z=0;struct infoGrabar* estructura;
 	char aux[1032];
 	while(stru[x-1]!=')'){
 		while(stru[x]!=',' && stru[x]!=')'){
@@ -311,19 +334,19 @@ struct infoGrabar Estructura(char *stru){
 		}
 		aux[i]='\0';
 		if(z==0){
-			estructura.dir1=atoi(aux);
+			estructura->dir1=atoi(aux);
 			i=0;
 		}
 		if(z==1){
-			strcpy(estructura.dato1,aux);
+			strcpy(estructura->dato1,aux);
 			i=0;
 		}
 		if(z==2){
-			estructura.dir2=atoi(aux);
+			estructura->dir2=atoi(aux);
 			i=0;
 		}
 		if(z==3){
-			strcpy(estructura.dato2,aux);
+			strcpy(estructura->dato2,aux);
 			i=0;
 		}
 		z++;x++;
