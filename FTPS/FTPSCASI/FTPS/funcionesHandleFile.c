@@ -140,7 +140,7 @@ char *pasarListaArchivosARespuestaFTP(char *buffer){
 				strcpy(lineaArchivo, "drwxrwxrwx 1 ftp ftp ");
 			}
 				strcat(lineaArchivo, argumento);
-				strcat(lineaArchivo, " Sep 02 2009 ");
+				strcat(lineaArchivo, " Jul 23 2011 ");
 				strcat(lineaArchivo, nombreArchivo);
 				strcat(lineaArchivo, "\n");
 				
@@ -189,7 +189,7 @@ int enviarSyscallRead(int fileDescriptor, int socketKSS, SOCKET clienteDatos){
 		}else{
 			OK = 0;
 		}
-	}while((paqueteSyscall->PayloadLenght == 1024) && OK);
+	}while((strcmp(paqueteSyscall->Payload, "No hay mas datos")!=0) && OK);
 		
 	return OK;
 }
@@ -204,11 +204,10 @@ int enviarSyscallWrite(int fileDescriptor, int socketKSS, SOCKET clienteDatos){
 		OK = 1;
 	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
 
-	generar_DescriptorID(paqueteSyscall->DescriptorID);
-	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
-	paqueteSyscall->PayloadDescriptor = '1';
-	
 	do{
+		generar_DescriptorID(paqueteSyscall->DescriptorID);
+		//strcpy(IDpaquete, paqueteSyscall->DescriptorID);
+		paqueteSyscall->PayloadDescriptor = '1';
 		cantidadBytes = recv (clienteDatos, bufferAuxiliar, 1024, 0);
 
 		contador = 0;
