@@ -11,7 +11,8 @@ typedef struct nTDD{
         long size;// size del archivo. Si es lectura permanece constante, si es escritura se debe actualizar.
         char buffer[1025]; // toda lectura o escritura se realiza en bloques de tamanio fijo 1k
         Sector* sector; // struct con el numero de sector + puntero al proximo num de sector
-        struct nTDD* siguiente;
+        int FTP;
+		struct nTDD* siguiente;
 }nodoTDD;
 
 typedef struct{
@@ -35,7 +36,7 @@ unsigned int descriptor_nuevo(nodoTDD*);
 int buscar_socket(nodo_lista_sockets*, char*);
 int buscar_tipo_apertura(nodoTDD*, unsigned int);
 int rellenar_sectores(char*, int);
-
+int existe_archivo(nodoTDD*, unsigned int);
 
 
 
@@ -54,7 +55,6 @@ nodoTDD* mount(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
 nodoTDD* umount(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
 nodoTDD* ls(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
 nodoTDD* format(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* md5sum(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
 nodoTDD* tdd_dump(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
 
 
@@ -76,9 +76,13 @@ Sector* generar_insertar_sector(Sector*, unsigned int);
 
 
 int buscar_request(char *,posible_request*);
-int parseo_parentesis (char *,char *,char *);
+int parseo_parentesis (char *,char *,char *, int);
 
 nodoTDD* eliminar_nodo_TDD(nodoTDD*, unsigned int);
-
+nodoTDD* vaciarTdd(nodoTDD*);
+nodoTDD* eliminar_nodos_de_vda(char*, nodoTDD*,nodo_lista_sockets*);
+nodoTDD* eliminar_nodos_de_ftp(int, nodoTDD*,nodo_lista_sockets*);
+void generar_DescriptorID(char *);
 
 int encontrar_mayor(nodo_lista_sockets*);
+void chequear_vda_montada(nodo_lista_sockets*);

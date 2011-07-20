@@ -106,25 +106,31 @@ int main(void){
 			printf("%d\n",recibidos);
 			print_pkg((MPS_Package*)Buffer);
 			printf("VDA>>");
-
-			strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,11);
-			mensaje_aux[11]='\0';
-
-			if (strcmp(mensaje_aux,"getSectores")){
-				//es putsectores
-				for(i=12;i<1045;i++){
-					stru_aux[i-12]=((MPS_Package*)Buffer)->Payload[i];
+			
+			if(((MPS_Package*)Buffer)->PayloadLenght > 10){
+			
+				strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,11);
+				mensaje_aux[11]='\0';
+	
+				if (!strcmp(mensaje_aux,"putSectores")){
+					//es putsectores
+					for(i=12;i<1045;i++){
+						stru_aux[i-12]=((MPS_Package*)Buffer)->Payload[i];
+					}
+					estructura = (struct infoGrabar*)stru_aux;
+					printf("\ndir1: %ld\ndir2: %ld\ndato1: %s\ndato2: %s\n", estructura->dir1, estructura->dir2, estructura->dato1, estructura->dato2);
+					//gets(mensaje->Payload); //deberia devolver ok
 				}
-				estructura = (struct infoGrabar*)stru_aux;
-				printf("\ndir1: %ld\ndir2: %ld\ndato1: %s\ndato2: %s\n", estructura->dir1, estructura->dir2, estructura->dato1, estructura->dato2);
-				//gets(mensaje->Payload); //deberia devolver ok
+				if (!strcmp(mensaje_aux,"getSectores")){					//es get sectores
+					printf("Sector 1: ");
+					gets(mensaje->Payload);
+					printf("VDA>>Sector 2: ");
+					gets(mensaje->Payload+512);
+					printf("Enviados los sectores! \n");
+				}
 			}
-			else{					//es get sectores
-				printf("Sector 1: ");
+			else{
 				gets(mensaje->Payload);
-				printf("VDA>>Sector 2: ");
-				gets(mensaje->Payload+512);
-				printf("Enviados los sectores! \n");
 			}
  //			parseo_parentesis(mensaje->Payload,comando,argumento);
 //			i=0;
