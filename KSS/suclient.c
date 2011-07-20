@@ -31,9 +31,15 @@ int main(void){
 	char Buffer[1200];
 	MPS_Package *mensaje;
 	char comando[10];
+	char consola[100];
 	char comandos_posibles[6][10]={"mount","umount","tdd_dump","md5sum","format","ls"};
 	int i=0;
-
+	FILE* archivo;
+	char nombre[31];
+	char argumento[40];
+	char desc[10];
+	char llamada[40];
+	
 	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
 	generar_DescriptorID(mensaje->DescriptorID);
 //	strcpy(mensaje->DescriptorID, "aiofnusany");
@@ -77,8 +83,9 @@ int main(void){
 		while(strcmp(mensaje->Payload,"halt")/*&&0!=recv(s,Buffer,sizeof(Buffer),0)*/){
 //			mensaje->PayloadDescriptor='2';
 			printf("NTVC>>");
-			gets(mensaje->Payload);
- 			sscanf(mensaje->Payload,"%s ",comando);
+			gets(consola);
+ 			sscanf(consola,"%s",comando);
+			strcpy(mensaje->Payload, consola);
 			i=0;
 			while (strcmp(comandos_posibles[i],comando)&&i<6){
 
@@ -91,7 +98,94 @@ int main(void){
 				printf("metiste un comando piolaaaaaaa\n");
 				mensaje->PayloadLenght=strlen(mensaje->Payload);
 				generar_DescriptorID(mensaje->DescriptorID);
-				send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+				mensaje->PayloadDescriptor='0';
+				if((strcmp(comando,"md5sum"))){
+					send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+				}
+				
+				if(!(strcmp(comando,"mount"))){
+					printf("entre al mount\n");
+					recv(s,Buffer,sizeof(Buffer),0);
+					mensaje = (MPS_Package*)Buffer;
+					printf("%s",mensaje->Payload);
+				}
+				
+				if(!(strcmp(comando,"umount"))){
+					printf("entre al mount\n");
+					recv(s,Buffer,sizeof(Buffer),0);
+					mensaje = (MPS_Package*)Buffer;
+					printf("%s",mensaje->Payload);
+				}
+				
+				if(!(strcmp(comando,"tdd_dump"))){
+					printf("entre al dump\n");
+					recv(s,Buffer,sizeof(Buffer),0);
+					mensaje = (MPS_Package*)Buffer;
+					while(mensaje->PayloadDescriptor == '1'){
+						printf("%s",mensaje->Payload);
+						mensaje->PayloadDescriptor='0';
+						strcpy(mensaje->Payload, "Mandame masss" );
+						mensaje->PayloadLenght=strlen("Mandame masss");
+						send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+						recv(s,Buffer,sizeof(Buffer),0);
+						mensaje = (MPS_Package*)Buffer;
+						//printf("%c\n",mensaje->PayloadDescriptor);
+					}
+					printf("sali del while\n");
+				}
+				if(!(strcmp(comando,"ls"))){
+					printf("entre al ls\n");
+					recv(s,Buffer,sizeof(Buffer),0);
+					mensaje = (MPS_Package*)Buffer;
+					printf("%s",mensaje->Payload);
+				}
+				
+				if(!(strcmp(comando,"format"))){
+					printf("entre al format\n");
+					recv(s,Buffer,sizeof(Buffer),0);
+					mensaje = (MPS_Package*)Buffer;
+					printf("%s",mensaje->Payload);
+				}
+				
+				if(!(strcmp(comando,"md5sum"))){
+					printf("entre al md5sum\n");
+					strcpy(argumento,mensaje->Payload);
+					memcpy(nombre, argumento+13, mensaje->PayloadLenght - 12);
+					archivo = fopen(nombre,"w");
+					mensaje->PayloadDescriptor = '1';
+					strcpy(mensaje->Payload,"sys_open(0,");
+					strcat(mensaje->Payload,argumento+7);
+					strcat(mensaje->Payload,")");
+					mensaje->PayloadLenght = strlen(mensaje->Payload);
+					send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+					recv(s, Buffer,sizeof(Buffer),0);
+					mensaje = (MPS_Package*)Buffer;
+					strcpy(desc,mensaje->Payload);
+					do{
+						mensaje->PayloadDescriptor = '1';
+						strcpy(mensaje->Payload,"sys_read(");
+						strcat(mensaje->Payload,desc);
+						strcat(mensaje->Payload,")");
+						mensaje->PayloadLenght = strlen(mensaje->Payload);
+						send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+						recv(s, Buffer,sizeof(Buffer),0);
+						mensaje = (MPS_Package*) Buffer;
+						fwrite(mensaje->Payload,sizeof(char), mensaje->PayloadLenght, archivo);
+					}while(mensaje->PayloadDescriptor == '1');
+					mensaje->PayloadDescriptor = '1';
+					strcpy(mensaje->Payload,"sys_close(");
+					strcat(mensaje->Payload,desc);
+					strcat(mensaje->Payload,")");
+					mensaje->PayloadLenght = strlen(mensaje->Payload);
+					send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+					recv(s, Buffer,sizeof(Buffer),0);
+					fclose(archivo);
+					strcpy(llamada, "md5sum ");
+					strcat(llamada, nombre);
+					system(llamada);
+				}
+				
+				
 //				printf("el tanio de la struct es : %d\n", sizeof(MPS_Package));
 			}
 			else { 

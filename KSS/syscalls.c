@@ -127,7 +127,7 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 		strcat(mensaje->Payload, nombre_archivo);
 		strcat(mensaje->Payload, ")");
 		mensaje->PayloadLenght = strlen(mensaje->Payload);
-		send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+		send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 		recv(Fss, buffer, sizeof(buffer), 0);
 //		mensaje = (MPS_Package*) buffer;
 
@@ -150,9 +150,9 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				strcat(mensaje->Payload, ")");
 //				printf("el mensaje es %s\n",mensaje->Payload);
 				mensaje->PayloadLenght = strlen(mensaje->Payload);
-				send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+				send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 				printf("enviado! \n");
-				//recv(Fss, buffer, sizeof(buffer), 0);
+				recv(Fss, buffer, sizeof(buffer), 0);
 				mensaje = (MPS_Package*) buffer;
 				printf("recibi esto %s\n", mensaje->Payload);
 				//hay que parsear el mensaje !!!!!!!!!!!!!
@@ -162,8 +162,9 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				strcpy(entradaTDD->nombreVDA, vda);
 				strcpy(entradaTDD->nombreArchivo, nombre_archivo);
 				entradaTDD->tipoApertura=tipo_de_apertura-'0';
+				entradaTDD->FTP=socket;
 				i=0;
-				strcpy(mensaje->Payload, "1024,2,34,567,8900");
+				//strcpy(mensaje->Payload, "1024,2,34,567,8900");
 				printf("llega al strcpy\n");
 				//guardo el tamanio del archivo en string
 				while(mensaje->Payload[i] != ',' && mensaje->Payload[i] != '\0'){
@@ -216,8 +217,9 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				strcat(mensaje->Payload, nombre_archivo);
 				strcat(mensaje->Payload, ")");
 				mensaje->PayloadLenght = strlen(mensaje->Payload);
-				send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+				send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 				//no se si hay una respuesta del FSS
+				recv(Fss, buffer, sizeof(buffer), 0);
 // 4) crear archivo en el fss
 				mensaje->PayloadDescriptor = '5';
 				strcpy(mensaje->Payload, "crearArchivo(");
@@ -226,8 +228,9 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				strcat(mensaje->Payload, nombre_archivo);
 				strcat(mensaje->Payload, ")");
 				mensaje->PayloadLenght = strlen(mensaje->Payload);
-				send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+				send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 				//no se si hay una resp del FSS
+				recv(Fss, buffer, sizeof(buffer), 0);
 // 5) crear regisrto en la TDD
 				entradaTDD = generar_nodo();
 				entradaTDD->descriptor = desc_tdd;
@@ -237,6 +240,7 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				entradaTDD->size= 0;
 				strcpy(entradaTDD->buffer, "\0");
 				entradaTDD->sector = NULL;
+				entradaTDD->FTP=socket;
 				entradaTDD->siguiente = NULL;
 				Tdd = agregar_nodo_TDD(Tdd, entradaTDD);
 				break;
@@ -251,22 +255,57 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				entradaTDD->size= 0;
 				strcpy(entradaTDD->buffer, "\0");
 				entradaTDD->sector = NULL;
+				entradaTDD->FTP=socket;
 				entradaTDD->siguiente = NULL;
 				Tdd = agregar_nodo_TDD(Tdd, entradaTDD);
 				break;				
 			}
-			
-			mensaje->PayloadDescriptor='1';
-			strcpy(mensaje->DescriptorID,desc);
-			sprintf(mensaje->Payload,"%u",desc_tdd);
-	                mensaje->PayloadLenght = strlen(mensaje->Payload);
-
-			send(socket, mensaje, 21+mensaje->PayloadLenght+1, 0); //devuelvo al FTP el descriptor del archivo que abrio, no necesario ahora //PROTOCOLOO!!! DALEE PAPAAA
 		}else{
 			//no existe el archivo
+			desc_tdd = descriptor_nuevo(Tdd);
+			switch(tipo_de_apertura){
+				case '1':
+// en caso de ESCRITURA
+// 4) crear archivo en el fss
+				mensaje->PayloadDescriptor = '5';
+				strcpy(mensaje->Payload, "crearArchivo(");
+				strcat(mensaje->Payload, vda);
+				strcat(mensaje->Payload, ",");
+				strcat(mensaje->Payload, nombre_archivo);
+				strcat(mensaje->Payload, ")");
+				mensaje->PayloadLenght = strlen(mensaje->Payload);
+				send(Fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+				//no se si hay una resp del FSS
+				recv(Fss, buffer, sizeof(buffer), 0);
+// 5) crear regisrto en la TDD
+				entradaTDD = generar_nodo();
+				entradaTDD->descriptor = desc_tdd;
+				strcpy(entradaTDD->nombreVDA, vda);
+				strcpy(entradaTDD->nombreArchivo, nombre_archivo);
+				entradaTDD->tipoApertura =tipo_de_apertura-'0';
+				entradaTDD->size= 0;
+				strcpy(entradaTDD->buffer, "\0");
+				entradaTDD->sector = NULL;
+				entradaTDD->FTP=socket;
+				entradaTDD->siguiente = NULL;
+				Tdd = agregar_nodo_TDD(Tdd, entradaTDD);
+				break;
+			}
 		}
+		mensaje->PayloadDescriptor='1';
+		strcpy(mensaje->DescriptorID,desc);
+		sprintf(mensaje->Payload,"%u",desc_tdd);
+	    mensaje->PayloadLenght = strlen(mensaje->Payload);
+
+		send(socket, mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL); //devuelvo al FTP el descriptor del archivo que abrio
 	}else{
 		//ya esta abierto
+		mensaje->PayloadDescriptor='0';
+		strcpy(mensaje->DescriptorID,desc);
+		strcpy(mensaje->Payload,"El archivo ya esta abierto\n");
+	    mensaje->PayloadLenght = strlen(mensaje->Payload);
+
+		send(socket, mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 	}
 	
 	return Tdd;
@@ -293,68 +332,76 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 //	nodo_aux = (nodoTDD*) malloc(sizeof(nodoTDD));
 	nodo_aux = Tdd;
 	sscanf(argumento, "%u", &desc_tdd);
-
+	
+	if(existe_archivo(Tdd,desc_tdd)){
 // 1) vverificar que el archivo este abierto en modo lectura
-	if(buscar_tipo_apertura(Tdd, desc_tdd)==0){
-	// se abrio para lectura
+		if(buscar_tipo_apertura(Tdd, desc_tdd)==0){
+		// se abrio para lectura
 //2) obtener sectores de la vda		
-		//busco el nodo de la tdd
-		while(nodo_aux->descriptor!=desc_tdd){
-			nodo_aux=nodo_aux->siguiente;
-		}
-		//busco el socket de la vda
-		socket_vda = buscar_socket(lista_sockets, nodo_aux->nombreVDA);
-		sector1 = -1;
-		if(nodo_aux->sector !=NULL){
-			sector1 = (nodo_aux->sector)->sector;
-			sector2= -1;
-			nodo_aux->sector = (nodo_aux->sector)->punteroSector;
-		}
-		if(nodo_aux->sector !=NULL){
-			sector2 = (nodo_aux->sector)->sector;
-			nodo_aux->sector = (nodo_aux->sector)->punteroSector;
-		}
-		if(sector1 == -1){
-		//no hay sectores
-			strcpy(nodo_aux->buffer, "\0");
-			mensaje->PayloadDescriptor = '0';
-			strcpy(mensaje->Payload, "No hay mas datos");
-			mensaje->PayloadLenght = strlen("No hay mas datos");
-			send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+			//busco el nodo de la tdd
+			while(nodo_aux->descriptor!=desc_tdd){
+				nodo_aux=nodo_aux->siguiente;
+			}
+			//busco el socket de la vda
+			socket_vda = buscar_socket(lista_sockets, nodo_aux->nombreVDA);
+			sector1 = -1;
+			if(nodo_aux->sector !=NULL){
+				sector1 = (nodo_aux->sector)->sector;
+				sector2= -1;
+				nodo_aux->sector = (nodo_aux->sector)->punteroSector;
+			}
+			if(nodo_aux->sector !=NULL){
+				sector2 = (nodo_aux->sector)->sector;
+				nodo_aux->sector = (nodo_aux->sector)->punteroSector;
+			}
+			if(sector1 == -1){
+			//no hay sectores
+				strcpy(nodo_aux->buffer, "\0");
+				mensaje->PayloadDescriptor = '0';
+				strcpy(mensaje->Payload, "No hay mas datos");
+				mensaje->PayloadLenght = strlen("No hay mas datos");
+				send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+			}
+			else{
+			//hay sectores
+				sprintf(sect1,"%d",sector1);
+				sprintf(sect2,"%d",sector2);
+				mensaje->PayloadDescriptor = '2';
+				strcpy(mensaje->Payload, "getSectores(");
+				strcat(mensaje->Payload, sect1);
+				strcat(mensaje->Payload, ",");
+				strcat(mensaje->Payload, sect2);
+				strcat(mensaje->Payload, ")");
+				mensaje->PayloadLenght = strlen(mensaje->Payload);
+				send(socket_vda, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+				recv(socket_vda, buffer, sizeof(buffer),0);
+				print_pkg((MPS_Package *)buffer);
+// 3) enviar buffer al ftp
+				mensaje = (MPS_Package*)buffer;
+				memcpy(sectores,mensaje->Payload, mensaje->PayloadLenght);
+				//rellenar_sectores(sectores,);
+				strcpy(nodo_aux->buffer, sectores);
+				mensaje->PayloadDescriptor = '1';
+				strcpy(mensaje->Payload, sectores);
+				mensaje->PayloadLenght = 1024;
+				send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+			}
 		}
 		else{
-		//hay sectores
-			sprintf(sect1,"%d",sector1);
-			sprintf(sect2,"%d",sector2);
-			mensaje->PayloadDescriptor = '2';
-			strcpy(mensaje->Payload, "getSectores(");
-			strcat(mensaje->Payload, sect1);
-			strcat(mensaje->Payload, ",");
-			strcat(mensaje->Payload, sect2);
-			strcat(mensaje->Payload, ")");
-			mensaje->PayloadLenght = strlen(mensaje->Payload);
-			send(socket_vda, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
-			recv(socket_vda, buffer, sizeof(buffer),0);
-			print_pkg((MPS_Package *)buffer);
-// 3) enviar buffer al ftp
-			mensaje = (MPS_Package*)buffer;
-			memcpy(sectores,mensaje->Payload, mensaje->PayloadLenght);
-			//rellenar_sectores(sectores,);
-			strcpy(nodo_aux->buffer, sectores);
-			mensaje->PayloadDescriptor = '1';
-			strcpy(mensaje->Payload, sectores);
-			mensaje->PayloadLenght = 1024;
-			send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+		//no se abrio para lectura
+			mensaje->PayloadDescriptor = '0';
+			strcpy(mensaje->Payload, "No se abrio para lectura");
+			mensaje->PayloadLenght = strlen("No se abrio para lectura");
+			send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 		}
 	}
 	else{
-	//no se abrio para lectura
+		//no se abrio
 		mensaje->PayloadDescriptor = '0';
-		strcpy(mensaje->Payload, "No se abrio para lectura");
-		mensaje->PayloadLenght = strlen("No se abrio para lectura");
-		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+		strcpy(mensaje->Payload, "El archivo no está abierto");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 	}
-
 	return Tdd;
 }
 
@@ -392,40 +439,52 @@ nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 	
 	
 	
-	
+	if(existe_archivo(Tdd,desc_tdd)){
 // 1) vverificar que el archivo este abierto en modo escritura
-	if(buscar_tipo_apertura(Tdd, desc_tdd)==1){
-	// se abrio para escritura
+		if(buscar_tipo_apertura(Tdd, desc_tdd)==1){
+		// se abrio para escritura
 // 2) escribir en el buffer de la Tdd		
-		//busco el nodo de la tdd
-		while(nodo_aux->descriptor!=desc_tdd){
-			nodo_aux=nodo_aux->siguiente;
-		}
-		rellenar_sectores(sectores, tamanio_archivo);
-		printf("rellene los sectores\n");
-		memcpy(nodo_aux->buffer, sectores, tamanio_archivo);
+			//busco el nodo de la tdd
+			while(nodo_aux->descriptor!=desc_tdd){
+				nodo_aux=nodo_aux->siguiente;
+			}
+			rellenar_sectores(sectores, tamanio_archivo);
+			printf("rellene los sectores\n");
+			memcpy(nodo_aux->buffer, sectores, tamanio_archivo);
 // 3) llamar a sysflush
-		respuesta_sys_flush = sys_flush(Tdd, lista_sockets, socket, desc, desc_tdd);
+			respuesta_sys_flush = sys_flush(Tdd, lista_sockets, socket, desc, desc_tdd);
 // 4) actualizar tamanio en la TDD
-		if(respuesta_sys_flush){
-			printf("el sys flush me respondio bien\n");
-			nodo_aux->size += tamanio_archivo;
+			if(respuesta_sys_flush){
+				printf("el sys flush me respondio bien\n");
+				nodo_aux->size += tamanio_archivo;
 // 5) responder al ftp
-			mensaje->PayloadDescriptor = '1';
-			strcpy(mensaje->Payload, "sys_write exitosa");
-			mensaje->PayloadLenght = strlen("sys_write exitosa");
-			send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+				mensaje->PayloadDescriptor = '1';
+				strcpy(mensaje->Payload, "sys_write exitosa");
+				mensaje->PayloadLenght = strlen("sys_write exitosa");
+				send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+			}
+			else{
+				mensaje->PayloadDescriptor = '0';
+				strcpy(mensaje->Payload, "no hay mas sectores libres");
+				mensaje->PayloadLenght = strlen(mensaje->Payload);
+				send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+				return(Tdd);
+			}
 		}
 		else{
-			return(Tdd);
+		// no se abrio para escritura
+			mensaje->PayloadDescriptor = '0';
+			strcpy(mensaje->Payload, "No se abrio para escritura");
+			mensaje->PayloadLenght = strlen("No se abrio para escritura");
+			send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 		}
 	}
 	else{
-	// no se abrio para escritura
+		//no se abrio
 		mensaje->PayloadDescriptor = '0';
-		strcpy(mensaje->Payload, "No se abrio para escritura");
-		mensaje->PayloadLenght = strlen("No se abrio para escritura");
-		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+		strcpy(mensaje->Payload, "El archivo no está abierto");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 	}
 	return(Tdd);
 }
@@ -456,74 +515,85 @@ int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char*
 	strcpy(mensaje->DescriptorID, desc);
 	i=0;
 	FSS = buscar_socket(lista_sockets, "FSS");
-	while(Tdd->descriptor != desc_tdd){
+	/*while(Tdd->descriptor != desc_tdd){
 		Tdd = Tdd->siguiente;
-	}
+	}*/
+	if(existe_archivo(Tdd,desc_tdd)){
 // 1) vverificar que el archivo este abierto en modo escritura
-	if(buscar_tipo_apertura(Tdd, desc_tdd)==1){
-	// se abrio para escritura
+		if(buscar_tipo_apertura(Tdd, desc_tdd)==1){
+		// se abrio para escritura
 // 2) solicitar dos sectore slibres al FSS de la VDA correspondiente
-		mensaje->PayloadDescriptor = '8';
-		strcat(mensaje->Payload, "dosSectoresLibres(");
-		strcat(mensaje->Payload, Tdd->nombreVDA);
-		strcat(mensaje->Payload, ")");
-		mensaje->PayloadLenght = strlen(mensaje->Payload);
-		send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
-		recv(FSS, buffer, sizeof(buffer), 0);
-		mensaje = (MPS_Package*) buffer;
-		strcpy(sectores, mensaje->Payload);
+			mensaje->PayloadDescriptor = '8';
+			strcpy(mensaje->Payload, "dosSectoresLibres(");
+			strcat(mensaje->Payload, Tdd->nombreVDA);
+			strcat(mensaje->Payload, ")");
+			mensaje->PayloadLenght = strlen(mensaje->Payload);
+			send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+			recv(FSS, buffer, sizeof(buffer), 0);
+			mensaje = (MPS_Package*) buffer;
+			strcpy(sectores, mensaje->Payload);
 // 3) mandar el putSectores al VDA
-		//lleno la estructura
-		while(sectores[i]!=','){
-			sector1[i]=sectores[i];
-			i++;
-		}
-		sector1[i]='\0';
-		i++;
-		while(sectores[i]!='\0'){
-			sector2[j]=sectores[i];
-			i++;
-			j++;
-		}
-		sector2[j]='\0';
+			if(strcmp(mensaje->Payload,"NO")){
+				//lleno la estructura
+				while(sectores[i]!=','){
+					sector1[i]=sectores[i];
+					i++;
+				}
+				sector1[i]='\0';
+				i++;
+				while(sectores[i]!='\0'){
+					sector2[j]=sectores[i];
+					i++;
+					j++;
+				}
+				sector2[j]='\0';
 		
 		
-		sscanf(sector1, "%ld",&estructura->dir1);
-		sscanf(sector2, "%ld",&estructura->dir2);
-		for(i=0;i<512;i++){
-			estructura->dato1[i] = Tdd->buffer[i];
-		}
-		for(i=512;i<1024;i++){
-			estructura->dato2[i-512] = Tdd->buffer[i];
-		}
-		//mando el putSectores
-		mensaje->PayloadDescriptor = '3';
-		strcpy(mensaje->Payload, "putSectores(");		
-		for(i=0;i<1032;i++){
-			mensaje->Payload[i+12] = ((char*)estructura)[i];
-		}
-		strcpy(mensaje->Payload+1044, ")");
-		mensaje->PayloadLenght = 1045;
-		socket_vda = buscar_socket(lista_sockets, Tdd->nombreVDA);
-		send(socket_vda, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+				sscanf(sector1, "%ld",&estructura->dir1);
+				sscanf(sector2, "%ld",&estructura->dir2);
+				for(i=0;i<512;i++){
+					estructura->dato1[i] = Tdd->buffer[i];
+				}
+				for(i=512;i<1024;i++){
+					estructura->dato2[i-512] = Tdd->buffer[i];
+				}
+				//mando el putSectores
+				mensaje->PayloadDescriptor = '3';
+				strcpy(mensaje->Payload, "putSectores(");		
+				for(i=0;i<1032;i++){
+					mensaje->Payload[i+12] = ((char*)estructura)[i];
+				}
+				strcpy(mensaje->Payload+1044, ")");
+				mensaje->PayloadLenght = 1045;
+				socket_vda = buscar_socket(lista_sockets, Tdd->nombreVDA);
+				send(socket_vda, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 // 4) asignar ambos sectores al archivo en el FSS
-		Tdd->sector=generar_insertar_sector(Tdd->sector, estructura->dir1);
-		Tdd->sector=generar_insertar_sector(Tdd->sector, estructura->dir2);
-		mensaje->PayloadDescriptor = '3';
-		strcpy(mensaje->Payload, "asignarSectores(");
-		strcat(mensaje->Payload, Tdd->nombreVDA);
-		strcat(mensaje->Payload, ",");
-		strcat(mensaje->Payload, Tdd->nombreArchivo);
-		strcat(mensaje->Payload, ",");
-		strcat(mensaje->Payload, sectores);
-		strcat(mensaje->Payload, ")");
-		mensaje->PayloadLenght = strlen(mensaje->Payload);
-		send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+				Tdd->sector=generar_insertar_sector(Tdd->sector, estructura->dir1);
+				Tdd->sector=generar_insertar_sector(Tdd->sector, estructura->dir2);
+				mensaje->PayloadDescriptor = '3';
+				strcpy(mensaje->Payload, "asignarSectores(");
+				strcat(mensaje->Payload, Tdd->nombreVDA);
+				strcat(mensaje->Payload, ",");
+				strcat(mensaje->Payload, Tdd->nombreArchivo);
+				strcat(mensaje->Payload, ",");
+				strcat(mensaje->Payload, sectores);
+				strcat(mensaje->Payload, ")");
+				mensaje->PayloadLenght = strlen(mensaje->Payload);
+				send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+				recv(FSS, buffer, sizeof(buffer), 0);  //OK
+			}
+			else{
+				return(0);
+			}	
+		}else{
+			//no se abrio para escritura
+			printf("Error sys_flush: el archivo no se abrió para escritura");
+			return(0);
+		}
 	}
 	else{
-		//no se abrio para escritura
-		printf("Error sys_flush: el archivo no se abrió para escritura");
-		return(0);
+		//no se abrio
+		return (0);
 	}
 // 5)responder el exito de la operacion
 	return(1);
@@ -539,6 +609,7 @@ nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 	unsigned int desc_tdd;
 	char tamanio_archivo[20];
 	int FSS;
+	char buffer[1200];
 	
 	FSS = buscar_socket(lista_sockets, "FSS");
 	sscanf(argumento, "%u", &desc_tdd);
@@ -562,7 +633,7 @@ nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 		if(buscar_tipo_apertura(Tdd, desc_tdd)==1){
 //ESCRITURA
 // 2) enviar al FSS el tamaño final del archivo
-			sprintf(tamanio_archivo,"%l",nodo_aux->size);
+			sprintf(tamanio_archivo,"%ld",nodo_aux->size);
 			mensaje->PayloadDescriptor = '6';
 			strcat(mensaje->Payload, "actualizarTamanio(");
 			strcat(mensaje->Payload, nodo_aux->nombreVDA);
@@ -572,7 +643,8 @@ nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 			strcat(mensaje->Payload, tamanio_archivo);
 			strcat(mensaje->Payload, ")");
 			mensaje->PayloadLenght = strlen(mensaje->Payload);
-			send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+			send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+			recv(FSS, buffer, sizeof(buffer), 0);
 		}
 		if(buscar_tipo_apertura(Tdd, desc_tdd)==2){
 //ELIMINAR
@@ -584,7 +656,7 @@ nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 			strcat(mensaje->Payload, nodo_aux->nombreArchivo);
 			strcat(mensaje->Payload, ")");
 			mensaje->PayloadLenght = strlen(mensaje->Payload);
-			send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+			send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 		}
 		
 // 3) eliminar el registro de la TDD
@@ -592,14 +664,14 @@ nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 		mensaje->PayloadDescriptor = '1';
 		strcpy(mensaje->Payload, "sys close exitosa");
 		mensaje->PayloadLenght = strlen("sys close exitosa");
-		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 	}
 	else{
 	//el archivo no está abierto
 		mensaje->PayloadDescriptor = '0';
 		strcpy(mensaje->Payload, "No esta abierto");
 		mensaje->PayloadLenght = strlen("No esta abierto");
-		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 	}
 	
 	return(Tdd);
@@ -644,7 +716,7 @@ nodoTDD* sys_list(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 		mensaje->PayloadDescriptor = '1';
 		strcpy(mensaje->Payload, vdas_montadas);
 		mensaje->PayloadLenght = strlen(mensaje->Payload);
-		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);	
+		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);	
 	}
 	else{
 // SI EL PARAMETRO ES /VDAx
@@ -660,19 +732,27 @@ nodoTDD* sys_list(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 		strcat(mensaje->Payload, vda_pedida);
 		strcat(mensaje->Payload, ")");
 		mensaje->PayloadLenght = strlen(mensaje->Payload);
-		send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+		send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 		recv(FSS, buffer, sizeof(buffer), 0);
 		//mandarle al ftp
 		mensaje = (MPS_Package*)buffer;
 		mensaje->PayloadDescriptor = '1';
 		mensaje->PayloadLenght = strlen(mensaje->Payload);
-		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 	}
 	return(Tdd);
 }
 
 
-
+int existe_archivo(nodoTDD* Tdd, unsigned int desc_tdd){
+	while(Tdd != NULL){
+		if(Tdd->descriptor==desc_tdd){
+			return(1);
+		}
+		Tdd = Tdd->siguiente;
+	}
+	return (0);
+}
 
 int buscar_socket(nodo_lista_sockets* lista_sockets, char* busqueda){
 	while(lista_sockets!= NULL){
@@ -733,8 +813,8 @@ int rellenar_sectores(char* sectores, int desde){
 
 nodoTDD* eliminar_nodo_TDD(nodoTDD* Tdd, unsigned int desc_tdd){
 	nodoTDD *aux, *anterior;
-	aux = (nodoTDD*) malloc(sizeof(nodoTDD));
-	anterior = (nodoTDD*) malloc(sizeof(nodoTDD));
+	//aux = (nodoTDD*) malloc(sizeof(nodoTDD));
+	//anterior = (nodoTDD*) malloc(sizeof(nodoTDD));
 	aux=Tdd;
 	
 	if(Tdd->descriptor == desc_tdd){
@@ -776,94 +856,344 @@ Sector* generar_insertar_sector(Sector* lista_tdd, unsigned int numero_sector){
 	
 
 nodoTDD* mount(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
-
+	MPS_Package *mensaje;
+	int i,j;
+	int socket_fss,socket_shell;
+	char buffer[1072];
+	
+	
 	printf("entre a mount\n");
-	printf("%s\n",lista_sockets->estado);
-
+	socket_fss = buscar_socket(lista_sockets, "FSS");
+	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+	strcpy(mensaje->DescriptorID, desc);
+	socket_shell = buscar_socket(lista_sockets, "SH");
+	
+	
+	//printf("%s\n",lista_sockets->estado);
+	mensaje->PayloadDescriptor = '1';
+	
+	
 	while(lista_sockets!=NULL&&strcmp(lista_sockets->nombre,argumento)){
 		lista_sockets=lista_sockets->puntero_siguiente;
-		}
-	if (lista_sockets==NULL){
-		printf("no encontre la VDA \n");
-		}
+	}
+	if(lista_sockets==NULL){
+		strcpy(mensaje->Payload, argumento);
+		strcat(mensaje->Payload, " no existe.\n");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+	}
 	else{ 
-		printf("%s montada!!",argumento);
-		strcpy(lista_sockets->estado,"montado");
+		strcpy(mensaje->Payload, "tieneFormato(");
+		strcat(mensaje->Payload, argumento);
+		strcat(mensaje->Payload, ")");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		recv(socket_fss, buffer, sizeof(buffer), 0);
+		mensaje = (MPS_Package*)buffer;
+		if(!strcmp(mensaje->Payload,"OK")){
+			strcpy(mensaje->Payload, argumento);
+			strcat(mensaje->Payload, " montada!\n");
+			mensaje->PayloadLenght = strlen(mensaje->Payload);
+			send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+			strcpy(lista_sockets->estado,"montado");
 		}
+		else{
+			strcpy(mensaje->Payload, argumento);
+			strcat(mensaje->Payload, " no tiene formato. Por favor formatee primero.\n");
+			mensaje->PayloadLenght = strlen(mensaje->Payload);
+			send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		}
+	}
 
 	return (Tdd);
 }
 
 nodoTDD* umount(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
+	MPS_Package *mensaje;
+	int i,j;
+	int socket_fss,socket_shell;
+	char buffer[1072];
+	
+	
+	printf("entre a umount\n");
+	socket_fss = buscar_socket(lista_sockets, "FSS");
+	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+	strcpy(mensaje->DescriptorID, desc);
+	socket_shell = buscar_socket(lista_sockets, "SH");
+    
+    //printf("%s\n",lista_sockets->estado);
 
-        printf("entre a umount\n");
-        printf("%s\n",lista_sockets->estado);
+    while(lista_sockets!=NULL&&strcmp(lista_sockets->nombre,argumento)){
+        lista_sockets=lista_sockets->puntero_siguiente;
+    }
+    if (lista_sockets==NULL){
+        strcpy(mensaje->Payload, argumento);
+		strcat(mensaje->Payload, " no existe.\n");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+    }
+    else{
+		Tdd = eliminar_nodos_de_vda(argumento, Tdd, lista_sockets);
+        //printf("%s desmontada!!",argumento);
+		strcpy(mensaje->Payload, argumento);
+		strcat(mensaje->Payload, " desmontada!\n");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+        strcpy(lista_sockets->estado,"nomontado");
+    }
 
-        while(lista_sockets!=NULL&&strcmp(lista_sockets->nombre,argumento)){
-                lista_sockets=lista_sockets->puntero_siguiente;
-                }
-        if (lista_sockets==NULL){
-                printf("no encontre la VDA \n");
-                }
-        else{
-                printf("%s desmontada!!",argumento);
-                strcpy(lista_sockets->estado,"nomontado");
-                }
-
-        return (Tdd);
+    return (Tdd);
 }
 
 nodoTDD* tdd_dump(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
-
+	int socket_shell;
 	Sector* psector;
 	nodoTDD* ptdd;
-        printf("entre a tdd dump\n");
-        printf("-----------------------------------------\n");
+	MPS_Package *mensaje;
+	char var_temp[50];
+	char buffer[1200];
+		
+	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+	strcpy(mensaje->DescriptorID, desc);
+
+	
+	socket_shell = buscar_socket(lista_sockets, "SH");
+        
+	printf("entre a tdd dump\n");
+	
+	mensaje->PayloadDescriptor = '1';
+	strcpy(mensaje->Payload, "-----------------------------------------\n");
+	mensaje->PayloadLenght = strlen(mensaje->Payload);
+	send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+    
 
 	ptdd = Tdd;
 	while (ptdd!=NULL){
 //		printf("\n");
-
-		printf("descriptor: %u\n",ptdd->descriptor);
-		printf("NombreVDA: %s\n",ptdd->nombreVDA);
-		printf("nombreArchivo %s\n",ptdd->nombreArchivo);
-		printf("tipoApertura: %d\n",ptdd->tipoApertura);
-		printf("size: %u\n",ptdd->size);
-		printf("buffer: %s\n",ptdd->buffer);
-		printf("sectores: ");
+		sprintf(var_temp, "%u", ptdd->descriptor);
+		strcpy(mensaje->Payload,"Descriptor: ");
+		strcat(mensaje->Payload,var_temp);
+		strcat(mensaje->Payload,"\nNombre VDA: ");
+		strcat(mensaje->Payload, ptdd->nombreVDA);
+		strcat(mensaje->Payload,"\nNombre archivo: ");
+		strcat(mensaje->Payload,ptdd->nombreArchivo);
+		sprintf(var_temp,"%d",ptdd->tipoApertura);
+		strcat(mensaje->Payload,"\nTipo de apertura: ");
+		strcat(mensaje->Payload,var_temp);
+		sprintf(var_temp,"%u", ptdd->size);
+		strcat(mensaje->Payload,"\nSize: ");
+		strcat(mensaje->Payload,var_temp);
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		recv(socket_shell, buffer, sizeof(buffer),0); 
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		strcpy(mensaje->Payload,"\nBuffer: ");
+		strcat(mensaje->Payload, ptdd->buffer);
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		recv(socket_shell, buffer, sizeof(buffer),0); 
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		strcpy(mensaje->Payload,"\nSectores: ");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		recv(socket_shell, buffer, sizeof(buffer),0); 
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		//printf("descriptor: %u\n",ptdd->descriptor);
+		//printf("NombreVDA: %s\n",ptdd->nombreVDA);
+		//printf("nombreArchivo %s\n",ptdd->nombreArchivo);
+		//printf("tipoApertura: %d\n",ptdd->tipoApertura);
+		//printf("size: %u\n",ptdd->size);
+		//printf("buffer: %s\n",ptdd->buffer);
+		//printf("sectores: ");
 		psector=ptdd->sector;
 		while(psector!=NULL){
-			printf("%d ",psector->sector);
+			sprintf(var_temp,"%d",psector->sector);
+			//printf("%d ",psector->sector);
+			strcpy(mensaje->Payload,var_temp);
+			strcat(mensaje->Payload," ");
+			mensaje->PayloadLenght = strlen(mensaje->Payload);
+			recv(socket_shell, buffer, sizeof(buffer),0); 
+			send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 			psector=psector->punteroSector;
 		}
-		printf("\n");
-		printf("-----------------------------------------\n");
+		strcpy(mensaje->Payload, "\n-----------------------------------------\n");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		recv(socket_shell, buffer, sizeof(buffer),0); 
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 		ptdd=ptdd->siguiente;
 	}
-
+	mensaje->PayloadDescriptor = '0';
+	strcpy(mensaje->Payload, "\0");
+	mensaje->PayloadLenght = strlen(mensaje->Payload);
+	recv(socket_shell, buffer, sizeof(buffer),0); 
+	send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 //        printf("-----------------------------------------\n");
 
         return (Tdd);
 }
 
 nodoTDD* ls(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
-
-        printf("entre a ls\n");
-
-        return (Tdd);
+	char vdas_montadas[500];
+	int corrector;
+	MPS_Package *mensaje;
+	int i,j;
+	int socket_fss,socket_shell;
+	char buffer[1072];
+	char lista_archivos_tamanio[1050];
+	
+	printf("entre a ls\n");
+	socket_fss = buscar_socket(lista_sockets, "FSS");
+	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+	strcpy(mensaje->DescriptorID, desc);
+	socket_shell = buscar_socket(lista_sockets, "SH");
+	
+	printf("voy a listar el contenido de %s\n",argumento);
+	if(!strcmp(argumento,"/")){
+//SI EL PARAMETRO ES /
+//listar vdas montados
+		strcpy(vdas_montadas, "\0");
+		while(lista_sockets!=NULL){
+			if(! strncmp("VDA", lista_sockets->nombre,3)){
+				if(!strcmp(lista_sockets->estado,"montado")){
+					printf("llego al if anidado del list /\n");
+					strcat(vdas_montadas, lista_sockets->nombre);
+					printf("el nombre de la vda es: %s\n",lista_sockets->nombre);
+					strcat(vdas_montadas, "\n");
+				}
+			}
+			lista_sockets=lista_sockets->puntero_siguiente;
+		}
+		corrector = strlen(vdas_montadas);
+		if(corrector >1){
+			vdas_montadas[corrector] = '\0';
+		}
+		mensaje->PayloadDescriptor = '1';
+		strcpy(mensaje->Payload, vdas_montadas);
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);	
+	}
+	if(!strncmp(argumento,"VDA",3) && strlen(argumento)==4){
+// SI EL PARAMETRO ES /VDAx
+// enviar lista de archivos separados por \n
+		printf("entre a listar los arch\n");
+		mensaje->PayloadDescriptor = '9';
+		strcpy(mensaje->Payload, "listarDirectorio(");
+		strcat(mensaje->Payload, argumento);
+		strcat(mensaje->Payload, ")");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		recv(socket_fss, buffer, sizeof(buffer), 0);
+		//mandarle a la shell
+		mensaje = (MPS_Package*)buffer;
+		mensaje->PayloadDescriptor = '1';
+		if(mensaje->PayloadLenght>1){
+			i=0;
+			j=0;
+			while(i<(mensaje->PayloadLenght)){
+				while((mensaje->Payload)[i]!=','){
+					lista_archivos_tamanio[j]=(mensaje->Payload)[i];
+					i++;
+					j++;
+				}
+				i++;
+				lista_archivos_tamanio[j]='\n';
+				j++;
+				while((mensaje->Payload)[i]!=',' && i<(mensaje->PayloadLenght)){
+					i++;
+				}
+				i++;
+			}
+		}
+		strcpy(mensaje->Payload,lista_archivos_tamanio);
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+	}
+	else{
+		strcpy(mensaje->Payload,"Argumento incorrecto\n");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+	}
+    return (Tdd);
 }
 
 nodoTDD* format(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
-
-        printf("entre a format\n");
-
-        return (Tdd);
-}
-
-nodoTDD* md5sum(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
-
-        printf("entre a md5sum\n");
-
-        return (Tdd);
+	MPS_Package *mensaje;
+	int socket_fss,socket_shell, socket_vda, cilindros,cabezas,sectores,cantidad_sectores,i,j;
+	char buffer[1072];
+	char numaux[20];
+    
+	printf("entre a format\n");
+	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+	strcpy(mensaje->DescriptorID, desc);
+	socket_fss = buscar_socket(lista_sockets, "FSS");
+	socket_shell = buscar_socket(lista_sockets, "SH");
+	socket_vda = buscar_socket(lista_sockets, argumento);
+	
+	if(socket_vda == -1){
+		mensaje->PayloadDescriptor = '0';
+		strcpy(mensaje->Payload,"No existe esa VDA\n");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+	}
+	else{
+		//pedirle chs a la vda
+		mensaje->PayloadDescriptor = '4';
+		strcpy(mensaje->Payload,"getCHS()");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_vda, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		recv(socket_vda, buffer, sizeof(buffer),0);
+		mensaje = (MPS_Package*)buffer;
+		i=0;
+		j=0;
+		while((mensaje->Payload)[i]!=','){
+			numaux[j]=(mensaje->Payload)[i];
+			i++;
+			j++;
+		}
+		numaux[j]='\0';
+		sscanf(numaux, "%d",&cilindros);	
+		i++;
+		j=0;
+		while((mensaje->Payload)[i]!=','){
+			numaux[j]=(mensaje->Payload)[i];
+			i++;
+			j++;
+		}
+		numaux[j]='\0';
+		sscanf(numaux, "%d",&cabezas);	
+		i++;
+		j=0;
+		while((mensaje->Payload)[i]!='\0'){
+			numaux[j]=(mensaje->Payload)[i];
+			i++;
+			j++;
+		}
+		numaux[j]='\0';
+		sscanf(numaux, "%d",&sectores);
+		cantidad_sectores = cilindros*cabezas*sectores;
+		sprintf(numaux,"%d",cantidad_sectores);
+		//mando al fss que formatee
+		mensaje->PayloadDescriptor = '1';
+		strcpy(mensaje->Payload,"formatear(");
+		strcat(mensaje->Payload,argumento);
+		strcat(mensaje->Payload,",");
+		strcat(mensaje->Payload,numaux);
+		strcat(mensaje->Payload,")");
+		mensaje->PayloadLenght = strlen(mensaje->Payload);
+		send(socket_fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		recv(socket_fss, buffer, sizeof(buffer),0);
+		mensaje=(MPS_Package*)buffer;
+		if(!strcmp(mensaje->Payload, "OK")){
+			mensaje->PayloadDescriptor = '1';
+			strcpy(mensaje->Payload,"VDA formateada\n");
+			mensaje->PayloadLenght = strlen(mensaje->Payload);
+			send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		}
+		else{
+			mensaje->PayloadDescriptor = '0';
+			strcpy(mensaje->Payload,"VDA NO formateada\n");
+			mensaje->PayloadLenght = strlen(mensaje->Payload);
+			send(socket_shell, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		}
+	}
+	
+	return (Tdd);
 }
 

@@ -8,10 +8,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <sys/un.h>
+#include <time.h>
 #include "kss.h"
 
 #define SOCK_PATH "echo_socket"
 
+int fss=0;
+int vda_montada=0;
 // PAyload descriptors: 0 shell   1 ftp        2 filesystem    3 vda
 //int parseo_parentesis (char *,char *,char *);
 
@@ -72,7 +75,7 @@ nodo_lista_sockets*  eliminar_nodo(nodo_lista_sockets*, nodo_lista_sockets*, nod
 
 int main(void)
 {
-    	extern int errno;
+    extern int errno;
 	int largo;
 //	struct sockaddr socket_prueba;
 
@@ -90,9 +93,11 @@ int main(void)
 
 	nodoTDD* Tdd;
 	
+	MPS_Package* mensaje;
+	
 	char Buffer[1200];
 
-	posible_request vector_requests[11];
+	posible_request vector_requests[10];
 
 
 	init_vector_requests (vector_requests);
@@ -106,15 +111,14 @@ int main(void)
 	//int fd_vec[10];				//vector donde almaceno los descriptores
 
 //	Tdd = (nodoTDD*) malloc(sizeof(nodoTDD));
+	mensaje=(MPS_Package*) malloc(sizeof(MPS_Package));
 	Tdd = NULL;
 	fd_set *set_sockets=malloc(sizeof(fd_set));	//bolsa de descriptores
-
-            
+    
 	struct sockaddr_in *local_in= malloc(sizeof (struct sockaddr_in));
-        struct sockaddr_in *remote_in= malloc(sizeof (struct sockaddr_in));
-
-        struct sockaddr_un *local_un= malloc(sizeof (struct sockaddr_un));
-        struct sockaddr_un *remote_un= malloc(sizeof (struct sockaddr_un));
+    struct sockaddr_in *remote_in= malloc(sizeof (struct sockaddr_in));
+	struct sockaddr_un *local_un= malloc(sizeof (struct sockaddr_un));
+	struct sockaddr_un *remote_un= malloc(sizeof (struct sockaddr_un));
 
 /*
 	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
@@ -130,13 +134,13 @@ int main(void)
 
 
 
-        local_in->sin_family = AF_INET;
-        local_in->sin_addr.s_addr=INADDR_ANY;
-        local_in->sin_port = htons (5300);
+    local_in->sin_family = AF_INET;
+    local_in->sin_addr.s_addr=INADDR_ANY;
+    local_in->sin_port = htons (5300);
 
-        local_un->sun_family = AF_UNIX;
-        strcpy(local_un->sun_path, SOCK_PATH);
-        unlink(local_un->sun_path);
+    local_un->sun_family = AF_UNIX;
+    strcpy(local_un->sun_path, SOCK_PATH);
+    unlink(local_un->sun_path);
 
 	descriptor_un= socket(AF_UNIX,SOCK_STREAM,0);
 	descriptor_in= socket(AF_INET,SOCK_STREAM,0);
@@ -149,7 +153,7 @@ int main(void)
 	listen(descriptor_in,10);
 
 
-    	printf("Waiting for a connection...\n");
+    printf("Waiting for a connection...\n");
 
 
 /*	contador_descriptores=0;
@@ -179,7 +183,7 @@ int main(void)
 		j=lista_sockets;
 		do{
 			FD_SET(j->socket, set_sockets);
-			printf("agrego socket %d\n",j->socket);
+			printf("agrego socket %d    %s\n",j->socket,j->nombre);
 			j=j->puntero_siguiente;
 		}while(j != NULL);
 
@@ -191,11 +195,10 @@ int main(void)
 			}
 		}*/
 
-
+		chequear_vda_montada(lista_sockets);
+		
 		printf("Arranco con el select \n");
-
 		select(encontrar_mayor(lista_sockets)+1,set_sockets,NULL,NULL,NULL);
-
 		printf("Entro socket\n");
 
 
@@ -244,12 +247,24 @@ int main(void)
 
 		if ((j->socket!=descriptor_in )&&(j->socket!=descriptor_un)){				//algun socket existente (AF_INET o AF_UNIX)
 				printf("llamo un socket existente\n");
+				strcpy(Buffer,"\0");
 				retval=recv(j->socket,Buffer,sizeof(Buffer),0);
 				printf("el recv dio %d\n",retval);
 
 
 						//hubo una desconexion 
 				if (retval==0){
+					if(!strcmp(j->nombre, "FSS")){
+						fss=0;
+						Tdd = vaciarTdd(Tdd);
+					}
+					if(!strncmp(j->nombre, "VDA",3) && !strcmp(j->estado,"montado")){
+						vda_montada=0;
+						Tdd = eliminar_nodos_de_vda(j->nombre, Tdd, lista_sockets);
+					}
+					if(!strcmp(j->nombre, "FTP")){
+						Tdd = eliminar_nodos_de_ftp(j->socket,Tdd, lista_sockets);
+					}						
 					close(j->socket);
 					p_ant = generar_nodo_sockets();
 					p_sig = generar_nodo_sockets();
@@ -277,7 +292,16 @@ int main(void)
 
 					}
 					else{
-						Tdd = atender_request(j,(MPS_Package*)Buffer,Tdd,lista_sockets,vector_requests);
+						if(!strcmp(j->nombre,"FTP") && !(fss && vda_montada)){
+							//avisarle al ftp que no puede
+							strcpy(mensaje->DescriptorID, ((MPS_Package*)Buffer)->DescriptorID);
+							mensaje->PayloadDescriptor = '0';
+							strcpy(mensaje->Payload,"El sistema no está operativo. Por favor intente más tarde");
+							mensaje->PayloadLenght=strlen(mensaje->Payload);
+							send(j->socket, (char *)mensaje,21+mensaje->PayloadLenght+1,0);
+						}else{
+							Tdd = atender_request(j,(MPS_Package*)Buffer,Tdd,lista_sockets,vector_requests);
+						}
 					}
 				}
 		sleep(1);
@@ -323,6 +347,7 @@ nodo_lista_sockets* atender_handshake(nodo_lista_sockets* nodo, nodo_lista_socke
 
 	aux = lista_sockets;
 	aux2=lista_sockets;
+	strcpy(nodo->nombre, "");
 	switch(Buffer->PayloadDescriptor){
 		case '0': //no puede haber mas de una shell
 			respuesta = 1;
@@ -350,12 +375,15 @@ nodo_lista_sockets* atender_handshake(nodo_lista_sockets* nodo, nodo_lista_socke
 			break;
 		case '2': //no puede haber mas de un fss
 			respuesta = 1;
-			while(aux != NULL){
+			if(fss){
+				respuesta = 0;
+			}
+			/*while(aux != NULL){
 				if(!strcmp(aux->nombre, "FSS")){
 					respuesta = 0;
 				}
 				aux = aux->puntero_siguiente;
-			}
+			}*/
 			break;
 		case '3': //no puede haber dos vdas con el mismo nombre
 			respuesta = 1;
@@ -395,6 +423,7 @@ nodo_lista_sockets* atender_handshake(nodo_lista_sockets* nodo, nodo_lista_socke
 				break;
 			case '2':
 				strcpy(nodo->nombre, "FSS");
+				fss=1;
 				break;	
 			case '3':
 				strcpy(nodo->nombre, ((MPS_Package*)buff)->Payload);
@@ -444,7 +473,7 @@ nodoTDD* atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* 
 
 			break;
 		case '1':		//don ftp
-			parseo_parentesis(Buffer->Payload,comando,argumento);
+			parseo_parentesis(Buffer->Payload,comando,argumento, Buffer->PayloadLenght);
                         printf("el comando es %s\n",comando);
                         printf("el argumento es %s\n",argumento);
 
@@ -555,10 +584,6 @@ int init_vector_requests(posible_request *vector_requests){
         vector_requests[8].punt_request=&format;
         strcpy(vector_requests[9].nombre_request,"ls");
         vector_requests[9].punt_request=&ls;
-        strcpy(vector_requests[10].nombre_request,"md5sum");
-        vector_requests[10].punt_request=&md5sum;
-
-
 
 	return 0;
 }
@@ -569,10 +594,10 @@ int buscar_request(char *request,posible_request* vector_requests){
 
 	printf("busco a: %s\n",request);
 	int i=0;
-	while (strcmp(request,vector_requests[i].nombre_request) && i<12){
+	while (strcmp(request,vector_requests[i].nombre_request) && i<11){
 		i++;
 	}
-	if (i==12){
+	if (i==11){
 		printf("request not found \n");
 		return -1;
 	}
@@ -583,25 +608,31 @@ int buscar_request(char *request,posible_request* vector_requests){
 }
 
 // para las llamadas al sistema!!!!
-int parseo_parentesis (char* cadena,char* comando,char *argumento){
+int parseo_parentesis (char* cadena,char* comando,char *argumento, int lenght){
         int i=0;
         int j=0;
-
+		int tamanio_archivo;
+		
         while (cadena[i]!= '('&&i<strlen(cadena)){
                 comando[i]=cadena[i];
                 i++;
         }
         comando[i]='\0';
-
-        i++;
-
-        while (cadena[i]!=')'&&i<strlen(cadena)){
+		
+		if(!strcmp(comando,"sys_write")){
+			tamanio_archivo= lenght - i - 1;
+			memcpy(argumento,cadena+i+1,tamanio_archivo);
+		}
+		else{
+			i++;
+			while (cadena[i]!=')'&&i<strlen(cadena)){
                 argumento[j]=cadena[i];
                 i++;
                 j++;
-        }
+			}
 
-        argumento[j]='\0';
+			argumento[j]='\0';
+		}
 
         return 0;
 }
@@ -615,4 +646,98 @@ int encontrar_mayor(nodo_lista_sockets* lista_sockets){
   lista_sockets= lista_sockets->puntero_siguiente;
  } 
  return(mayor); 
+}
+
+void chequear_vda_montada(nodo_lista_sockets* lista_sockets){
+	while(lista_sockets!= NULL){
+		if(!strncmp(lista_sockets->nombre,"VDA",3) && !strcmp(lista_sockets->estado, "montado")){
+			vda_montada = 1;
+		}
+		lista_sockets = lista_sockets->puntero_siguiente;
+	}
+}
+
+nodoTDD* vaciarTdd(nodoTDD* Tdd){
+	nodoTDD* ptdd;
+	
+	while(Tdd!=NULL){
+		ptdd=Tdd;
+		Tdd=Tdd->siguiente;
+		free(ptdd);
+	}
+	return (Tdd);
+}
+
+nodoTDD* eliminar_nodos_de_vda(char* vda, nodoTDD* Tdd, nodo_lista_sockets* lista_sockets){
+	nodoTDD* ptdd;
+	int socket_fss;
+	MPS_Package* mensaje;
+	char buffer[1200];
+	unsigned int desc;
+	char descID[16];
+	
+	socket_fss = socket_fss = buscar_socket(lista_sockets, "FSS");
+	ptdd=Tdd;
+	while(ptdd!=NULL){
+		if(!strcmp(ptdd->nombreVDA,vda)){
+			if(ptdd->tipoApertura==1){
+				mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+				generar_DescriptorID(descID);
+				strcpy(mensaje->DescriptorID,descID);
+				mensaje->PayloadDescriptor = '4';
+				strcpy(mensaje->Payload, "eliminarArchivo(");
+				strcat(mensaje->Payload, vda);
+				strcat(mensaje->Payload, ",");
+				strcat(mensaje->Payload, ptdd->nombreArchivo);
+				strcat(mensaje->Payload, ")");
+				mensaje->PayloadLenght = strlen(mensaje->Payload);
+				send(socket_fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+				recv(socket_fss, buffer, sizeof(buffer), 0);
+			}
+			desc = ptdd->descriptor;
+			ptdd=ptdd->siguiente;
+			Tdd = eliminar_nodo_TDD(Tdd, desc);
+			}
+		else{
+			ptdd=ptdd->siguiente;
+		}
+	}
+	return(Tdd);
+}
+
+nodoTDD* eliminar_nodos_de_ftp(int socket, nodoTDD* Tdd, nodo_lista_sockets* lista_sockets){
+	nodoTDD* ptdd;
+	int socket_fss;
+	MPS_Package* mensaje;
+	char buffer[1200];
+	unsigned int desc;
+	char descID[16];
+	
+	socket_fss = socket_fss = buscar_socket(lista_sockets, "FSS");
+	ptdd=Tdd;
+	while(ptdd!=NULL){
+		if(ptdd->FTP==socket){
+			if(ptdd->tipoApertura==1){
+				mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+				generar_DescriptorID(descID);
+				strcpy(mensaje->DescriptorID,descID);
+				mensaje->PayloadDescriptor = '4';
+				strcpy(mensaje->Payload, "eliminarArchivo(");
+				strcat(mensaje->Payload, ptdd->nombreVDA);
+				strcat(mensaje->Payload, ",");
+				strcat(mensaje->Payload, ptdd->nombreArchivo);
+				strcat(mensaje->Payload, ")");
+				mensaje->PayloadLenght = strlen(mensaje->Payload);
+				send(socket_fss, (char *)mensaje, 21+mensaje->PayloadLenght+1, 0);
+				recv(socket_fss, buffer, sizeof(buffer), 0);
+			}
+			desc = ptdd->descriptor;
+			ptdd=ptdd->siguiente;
+			Tdd = eliminar_nodo_TDD(Tdd, desc);
+			}
+		else{
+			ptdd=ptdd->siguiente;
+		}
+	}
+	return(Tdd);
 }
