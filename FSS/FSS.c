@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -21,34 +22,41 @@ typedef struct{
 	char Payload[1050];  //mensaje.
 }__attribute__ ((__packed__)) MPS_Package;
 
-int parseo_parentesis (char*,char*,char *);
-void generar_DescriptorID(char *);
 int print_pkg (MPS_Package*);
-char* obtenerFuncion(char);
-char* existeArchivo (char *vda, char *nombreArchivo);
-char* infoArchivo (char *vda, char *nombreArchivo);
-char* eliminarArchivo (char *vda, char *nombreArchivo);
-char* crearArchivo (char *vda, char *nombreArchivo);
-char* actualizarTamanio (char *vda, char *nombreArchivo, long nuevoTamanio);
-char* crearTablaSectoresLibres (char *vda, int cantidadSectores);
-char* dosSectoresLibres (char *vda);
-char* asignarSectores (char *vda, char *nombreArchivo, char *sectores);
-char* liberarSectores (char *vda, char *listaSectores);
+char* generar_DescriptorID(char *);
+char* existeArchivo (char *, char *);
+char* obtenerFuncion(char*);
+char* infoArchivo (char *, char *);
+char* eliminarArchivo (char *, char *);
+char* crearArchivo (char *, char *);
+char* actualizarTamanio(char *, char *, long);
+char* crearTablaSectoresLibres (char *, int );
+char* dosSectoresLibres (char *);
+char* asignarSectores (char *, char *, char *);
+char* liberarSectores (char *, char *);
+char* formatear (char* , int);
+char* tieneFormato (char *);
+char* listarDirectorio(char *);
 
-void main(){
+int main(){
 
-	char func[50],f[50],vda[4],nomArch[20],rta[50];
-	int x=0,z=0,i=0,tam=0,sec1,sec2;
+	char func[50],f[50],vda[4],nomArch[20],rta[50],sectores[50];
+	int t=0,x=0,z=0,i=0,tam=0,val2=0;
 	long val=0;
-	char aux[20];
 	char stru[1032];
-	int s, t, len;
+	int s, len;
+	char aux[1032];
+	char Buffer[1032];       
+
 	struct sockaddr_in remote;
-	char Buffer[1200];
+
 	MPS_Package *mensaje;
+
+	char mensaje_aux[20];	
+	char stru_aux[1032];
+
 	char comando[10];
 	char argumento[100];
-	
 	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
 	generar_DescriptorID(mensaje->DescriptorID);
 	mensaje->PayloadDescriptor='2';
@@ -80,57 +88,60 @@ void main(){
 
 	printf("Iniciando Handshake..\n");
 
-     send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+        send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
 	recv(s,Buffer,sizeof(Buffer),0);
 	print_pkg((MPS_Package*)Buffer);
 
 
 	if (((MPS_Package*)Buffer)->PayloadDescriptor=='0'){
-	printf("Handshake Failed \n");
+		printf("Handshake Failed \n");
+		exit(1);
 	}
 	else {
-		printf("Handshake OK\n");
+      		printf("Handshake OK\n");
 		while(strcmp(mensaje->Payload,"halt()")){
 		    recv(s,Buffer,sizeof(Buffer),0);
-			print_pkg((MPS_Package*)Buffer);
-			strcpy(mensaje->Payload,"FSS");
+                    print_pkg((MPS_Package*)Buffer);
+		    strcpy(mensaje->Payload,"FSS");
 			generar_DescriptorID(mensaje->DescriptorID);
 			mensaje->PayloadLenght=strlen(mensaje->Payload);
 			send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
 		}
-	while(1){
-	recv(s,Buffer,sizeof(Buffer),0);
-	strcpy(f,Buffer);
-	strcpy(func,obtenerFuncion(f));
-	
-	tam=strlen(func)+1;
-	for(i=tam;i<1045;i++){
-		stru[i-tam]=f[i];
-	}
-	i=0;
-	if( !strcmp(func,"existeArchivo")){
-		
-		while(stru[x-1]!=')'){
-			while(stru[x]!=',' && stru[x]!=')'){
-				aux[i]=stru[x];	
-				i++;x++;
-			}
-			aux[i]='\0';
-			if(z==0){
-				strcpy(vda,aux);
-				i=0;
-			}
-			if(z==1){
-				strcpy(nomArch,aux);
-				i=0;
-			}
-		z++;x++;aux[i]='\0';
-		}
-		z=0;x=0;
-		strcpy(rta,existeArchivo(vda,nomArch));
+        }
 
-	}
-	if( strcmp(func,"infoArchivo")){
+	while(1){
+		recv(s,Buffer,sizeof(Buffer),0);
+
+
+		strcpy(func,obtenerFuncion(((MPS_Package*)Buffer)->Payload));
+	
+		tam=strlen(func)+1;
+		for(i=tam;i<1045;i++){
+			stru[i-tam]=((MPS_Package*)Buffer)->Payload[i];;
+		}
+		i=0;
+		if( !strcmp(func,"existeArchivo")){
+
+			while(stru[x-1]!=')'){
+					while(stru[x]!=',' && stru[x]!=')'){
+						aux[i]=stru[x];	
+						i++;x++;
+					}
+					aux[i]='\0';
+					if(z==0){
+						strcpy(vda,aux);
+						i=0;
+					}
+					if(z==1){
+						strcpy(nomArch,aux);
+						i=0;
+					}
+					z++;x++;aux[i]='\0';
+			}
+				z=0;x=0;
+				strcpy(rta,existeArchivo(vda,nomArch));
+		}
+	if( !strcmp(func,"infoArchivo")){
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];	
@@ -169,7 +180,7 @@ void main(){
 		}
 		z=0;x=0;
 		strcpy(rta,eliminarArchivo(vda,nomArch));
-	}	
+	}
 	if( !strcmp(func,"crearArchivo")){
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
@@ -189,8 +200,8 @@ void main(){
 		}
 		z=0;x=0;
 		strcpy(rta,crearArchivo(vda,nomArch));
-	}		
-	if( !strcmp(func,"actualizarTamanio")){
+	}
+		if( !strcmp(func,"actualizarTamanio")){
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];	
@@ -206,7 +217,7 @@ void main(){
 				i=0;
 			}
 			if(z==2){
-				val=atoi(aux);
+				sscanf (aux, "%d", &val);
 				i=0;
 			}
 		z++;x++;aux[i]='\0';
@@ -226,13 +237,13 @@ void main(){
 				i=0;
 			}
 			if(z==1){
-				val=atoi(aux);
+				sscanf (aux, "%d", &val2);
 				i=0;
 			}
 		z++;x++;aux[i]='\0';
 		}
 		z=0;x=0;
-		strcpy(rta,crearTablaSectoresLibres(vda,val));
+		strcpy(rta,crearTablaSectoresLibres(vda,val2));
 	}
 	if( !strcmp(func,"dosSectoresLibres")){
 		while(stru[x-1]!=')'){
@@ -262,17 +273,24 @@ void main(){
 				i=0;
 			}
 			if(z==1){
-				sec1=atoi(aux);
+				strcpy(nomArch,aux);
 				i=0;
+			}			
+			if(z!=1 && z!=0){
+				if(t==0){
+					strcpy(sectores,aux);
+					t=1;
+				}else{
+					strcat(sectores,",");
+					strcat(sectores,aux);
+					i=0;
+				}
 			}	
-			if(z==2){
-				sec2=atoi(aux);
-				i=0;
-			}
-		z++;x++;aux[i]='\0';
+		aux[i]='\0';
+		z++;x++;
 		}
-		z=0;x=0;	
-		strcpy(rta,asignarSectores(vda,nomArch,sec1,sec2));
+		z=0;x=0;t=0;	
+		strcpy(rta,asignarSectores(vda,nomArch,sectores));
 	}
 	if( !strcmp(func,"liberarSectores")){
 		while(stru[x-1]!=')'){
@@ -285,18 +303,23 @@ void main(){
 				strcpy(vda,aux);
 				i=0;
 			}
-			if(z==1){
-				/*
-				Agregar lista de sectores
-				*/
+			if(z!=0){
+				if(t==0){
+					strcpy(sectores,aux);
+					t=1;
+				}else{
+					strcat(sectores,",");
+					strcat(sectores,aux);
+				}
 				i=0;
-			}
-		z++;x++;aux[i]='\0';
+			}	
+		aux[i]='\0';
+		z++;x++;
 		}
-		z=0;x=0;
-		//strcpy(rta,liberarSectores(vda,lsSectores));
+		z=0;x=0;t=0;
+		strcpy(rta,liberarSectores(vda,sectores));
 	}
-	if( !strcmp(func,"liberarDirectorio")){
+	if( !strcmp(func,"listarDirectorio")){
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];	
@@ -310,13 +333,13 @@ void main(){
 		z++;x++;aux[i]='\0';
 		}
 		z=0;x=0;
-		strcpy(rta,liberarDirectorio(vda));
+		strcpy(rta,listarDirectorio(vda));
 	}
 	if( !strcmp(func,"formatear")){
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];	
-				i++;x++;
+ 				i++;x++;
 			}
 			aux[i]='\0';
 			if(z==0){
@@ -324,21 +347,64 @@ void main(){
 				i=0;
 			}
 			if(z==1){
-				val=atoi(aux);
+				sscanf (aux, "%d", &val2);
 				i=0;
 			}
 		z++;x++;aux[i]='\0';
 		}
 		z=0;x=0;
-		strcpy(rta,liberarDirectorio(vda,val));
+		strcpy(rta,formatear(vda,val));
+	}   
+	    if( !strcmp(func,"tieneFormato")){
+                while(stru[x-1]!=')'){
+                        while(stru[x]!=',' && stru[x]!=')'){
+                                aux[i]=stru[x];
+                                i++;x++;
+                        }
+                        aux[i]='\0';
+                        if(z==0){
+                                strcpy(vda,aux);
+                                i=0;
+                        }
+                z++;x++;aux[i]='\0';
+                }
+                z=0;x=0;
+                strcpy(rta,tieneFormato(vda));
+        }
+
+			strcpy(mensaje->Payload,rta);
+			mensaje->PayloadLenght=strlen(mensaje->Payload);
+			send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+
 	}
-		strcpy(mensaje->Payload,rta);
-		mensaje->PayloadLenght=strlen(mensaje->Payload);
-		send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
-}
-	
+
+return 0;
 }
 
+int print_pkg(MPS_Package* mensaje){
+
+        printf("Server: DescriptorID = %s\n", mensaje->DescriptorID);
+        printf("Server: \"Pay Desc = %c\"\n", mensaje->PayloadDescriptor);
+        printf("Server: \"Lenght = %d\"\n",mensaje->PayloadLenght);
+        printf("Server: \"Payload = %s\"\n",mensaje->Payload);
+	return 0;
+}
+char* generar_DescriptorID(char *DescriptorID){
+	time_t tiempo;
+	char tpo[11], num[6];
+	long aleatorio;
+	
+	strcpy(DescriptorID, "");
+	srand(time(NULL));
+	time(&tiempo);
+	aleatorio = rand() % 90000;
+	aleatorio += 10000;
+	sprintf(tpo,"%d",tiempo);;
+	sprintf(num,"%ld",aleatorio);
+	strcat(DescriptorID, tpo);
+	strcat(DescriptorID, num);
+	return DescriptorID;
+}
 char* obtenerFuncion(char f[50]){
 	int x=0;
 	char func[20];
@@ -351,13 +417,12 @@ char* obtenerFuncion(char f[50]){
 	func[x]='\0';
 return func;
 }
-
 char* existeArchivo (char *vda, char *nombreArchivo){
 
 	FILE *archivo;
 	char dir[60];
 
-	sprintf(dir, "%s/%s",vda,nombreArchivo);
+	sprintf(dir, "/root/%s/%s",vda,nombreArchivo);
 
 	archivo = fopen(dir,"r");
 	if (archivo==NULL){
@@ -369,7 +434,6 @@ char* existeArchivo (char *vda, char *nombreArchivo){
 return "OK";
 
 }
-
 char* infoArchivo (char *vda, char *nombreArchivo){
 
 
@@ -378,10 +442,12 @@ char* infoArchivo (char *vda, char *nombreArchivo){
 	char infoArchivo[500],dir[40];
 
 
-	sprintf(dir, "%s/%s",vda,nombreArchivo);
+	sprintf(dir, "/root/%s/%s",vda,nombreArchivo);
 
 	archivo = fopen(dir, "r");
-
+		if (archivo==NULL){
+		return "NO EXISTE ARCHIVO";
+	}
 	fseek(archivo, 0, SEEK_END);
 	size = ftell(archivo);
 	rewind (archivo);
@@ -400,14 +466,15 @@ char* infoArchivo (char *vda, char *nombreArchivo){
 return infoArchivo;
 
 }
-
 char* eliminarArchivo (char *vda, char *nombreArchivo){
 
 	int i=0,j=0;
 	char dir[40],info[500], listaSectores[500];
 
 	sprintf(info, "%s", infoArchivo (vda, nombreArchivo));
-
+	if (!strcmp(info,"NO EXISTE ARCHIVO")){
+		return "NO EXISTE ARCHIVO!";
+	}
 	while (info[i] != ','){
 		i++;
 	}
@@ -423,7 +490,7 @@ char* eliminarArchivo (char *vda, char *nombreArchivo){
 	listaSectores[j]='\0';
 
 	liberarSectores (vda, listaSectores);
-	sprintf(dir, "%s/%s",vda,nombreArchivo);
+	sprintf(dir, "/root/%s/%s",vda,nombreArchivo);
 	remove(dir);
 
 return "OK";
@@ -435,10 +502,12 @@ char* crearArchivo (char *vda, char *nombreArchivo){
 	FILE *archivo;
 	char dir[40];
 
-	sprintf(dir, "%s/%s",vda,nombreArchivo);
+	sprintf(dir, "/root/%s/%s",vda,nombreArchivo);
 
 	archivo = fopen( dir,"w");
-
+	if (archivo==NULL){
+		return "NO SE PUDO CREAR!";
+	}
 	fclose(archivo);
 
 return "OK";
@@ -484,7 +553,7 @@ char* actualizarTamanio (char* vda, char* nombreArchivo, long actualiza){
 	printf("Nueva Info: %s\n",nuevaInfo);
 
 	//Agrego Nueva Info Al Archivo
-	sprintf(dir, "%s/%s",vda,nombreArchivo);
+	sprintf(dir, "/root/%s/%s",vda,nombreArchivo);
 	remove (dir);
 	archivo = fopen( dir,"w");
 	fputs (nuevaInfo, archivo);
@@ -498,7 +567,7 @@ char* crearTablaSectoresLibres (char *vda, int cantidadSectores){
 
 	FILE *archivo;
 	int i=0;
-	char array[cantidadSectores], dir[40];
+	char array[400], dir[40];
 
 
 
@@ -508,7 +577,7 @@ char* crearTablaSectoresLibres (char *vda, int cantidadSectores){
 	}
 	array[i]='\0';
 
-	sprintf (dir, "%s/free_sectors",vda);
+	sprintf (dir, "/root/%s/free_sectors",vda);
 	archivo = fopen(dir,"w");
 	fputs (array, archivo);
 
@@ -552,13 +621,13 @@ char* dosSectoresLibres (char *vda){
 	//Actualizo free_sectors
 	info[i]='1';
 	info[j]='1';
-	sprintf(dir, "%s/%s", vda, nombreArchivo);
+	sprintf(dir, "/root/%s/%s", vda, nombreArchivo);
 	remove (dir);
 	archivo = fopen( dir,"w");
 	fputs (info, archivo);
 	fclose (archivo);
 
-	snprintf (sectores, 10, "%d,%d", i,j);
+	//snprintf (sectores, 10, "%d,%d", i,j);
 	printf ("Sectores: %s\n", sectores);
 
 return sectores;
@@ -591,7 +660,7 @@ char* asignarSectores (char *vda, char *nombreArchivo, char *sectores){
 //	printf("info con sectores asignados: %s\n",info);
 
 
-	sprintf (dir, "%s/%s", vda,nombreArchivo);
+	sprintf (dir, "/root/%s/%s", vda,nombreArchivo);
 	remove (dir);
 	archivo = fopen (dir, "w");
 	fputs (info, archivo);
@@ -643,7 +712,7 @@ char* liberarSectores (char *vda, char *listaSectores){
 
 	printf("Sectores Cambiados: %s\n", sectoresVda);
 
-	sprintf(dir, "%s/%s",vda,"free_sectors");
+	sprintf(dir, "/root/%s/%s",vda,"free_sectors");
 	remove (dir);
 	archivo = fopen( dir,"w");
 	fputs (sectoresVda, archivo);
@@ -653,12 +722,48 @@ return "OK";
 
 }
 
+char* tieneFormato (char *vda){
+
+	FILE *archivo;
+	char dir[40];
+
+	sprintf(dir, "/root/%s/free_sectors", vda);
+
+	archivo = fopen (dir, "r");
+
+	if (archivo == NULL){
+		return "NO";
+	}
+
+	fclose (archivo);
+
+return "OK";
+
+}
+
 char* formatear (char* vda, int cantidadSectores){
 
-	char command1[40], command2[40];
+	char command1[40], command2[40], resp[4];
 
-	sprintf(command1, "rm -r %s", vda);
-	system (command1);
+	sprintf (resp, "%s", tieneFormato(vda) );
+
+
+	if ((strcmp(resp, "OK") == 0)){
+
+		sprintf(command1, "rm -r %s", vda);
+		system (command1);
+
+		sprintf (command2, "mkdir %s", vda);
+		system(command2);
+
+		crearTablaSectoresLibres(vda, cantidadSectores);
+
+		printf("sale por el IF!!!");
+
+		return "OK";
+
+	}
+
 	sprintf (command2, "mkdir %s", vda);
 	system(command2);
 
@@ -666,4 +771,30 @@ char* formatear (char* vda, int cantidadSectores){
 
 return "OK";
 
+}
+
+char* listarDirectorio (char* vda){
+ DIR *dirp;
+ struct dirent *direntp;
+char* func[20];
+         /* Abrimos el directorio */
+         sprintf(func,"/root/%s",vda);
+         dirp = opendir(func);
+
+         if (dirp == NULL){
+                 return "Error: No se puede abrir el directorio";
+          }{
+
+                        /* Leemos las entradas del directorio */
+
+                         printf("i-nodo\toffset\t\tlong\tnombre\n");
+
+                         while ((direntp = readdir(dirp)) != NULL) {
+                                 printf("%d\t%d\t%d\t%s\n", direntp->d_ino, direntp->d_off, direntp->d_reclen, direntp->d_name);
+                        }
+                }
+         /* Cerramos el directorio */
+
+         closedir(dirp);
+         return "OK";
 }

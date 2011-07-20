@@ -9,9 +9,12 @@
 #include <db.h>
 #pragma comment (lib, "libdb48.lib") 
 #include "funcionesVDA.h"
+#include "funcionesMPSvda.h"
+#include "funcionesConfig.h"
+#include "funcionesLog.h"
 
 int cache[10]={0,0,0,0,0,0,0,0,0,0};
-char vda[4];
+
 
 Nodo* InsertarNodo(Nodo *lista,Nodo *nodito)
 {
@@ -57,63 +60,69 @@ int x=0,num=0,i=0;
 	}
 return(num);
 }
-void buscarSector(long cabezal, long dirLogica){
-	
+int buscarSector(long cabezal, long dirLogica){
+	int	num=0;
 	if(cabezal==dirLogica){
 			printf("%d ",dirLogica);
+			num=0;
 	}else{
 		if(cabezal>dirLogica){
 			while(cabezal!=dirLogica){
 					printf("%d ",cabezal);
 					cabezal--;
+					num++;
 			}
 			printf("%d ",cabezal);
 		}else{
 			while(cabezal!=dirLogica){
 				printf("%d ",cabezal);
 				cabezal++;
+				num++;
 			}
 			printf("%d ",cabezal);
 		}
 	}
+	return num;
 }
-void sectLeidos(long dirLogica){
+int sectLeidos(long dirLogica){
 	
 	long cabezal;
 	struct chs cabCHS,dirCHS; 
-	
+	int num=0;
+
 	dirLogica=abs(dirLogica);
 	cabezal=leerCabezal();
-	cabCHS=getCHS(cabezal);
-	dirCHS=getCHS(dirLogica);
+	cabCHS=takeCHS(cabezal);
+	dirCHS=takeCHS(dirLogica);
 	printf("\nSectores Leidos:");
 	if(cabCHS.pista==dirCHS.pista){
-		buscarSector(cabezal,dirLogica);
+		num=buscarSector(cabezal,dirLogica);
 	}else{
 		if(cabCHS.pista<dirCHS.pista){
 			while(cabCHS.pista!=dirCHS.pista){
 					printf("%d ",cabezal);
 					cabezal=cabezal+4;
 					cabCHS.pista++;
-					//cabCHS=getCHS(cabezal);	
+					//cabCHS=takeCHS(cabezal);	
 			}
-			buscarSector(cabezal,dirLogica);
+			num=buscarSector(cabezal,dirLogica);
 		}else{
 			while(cabCHS.pista!=dirCHS.pista){
 					printf("%d ",cabezal);
 					cabezal=cabezal-4;
 					cabCHS.pista--;
-					//cabCHS=getCHS(cabezal);	
+					//cabCHS=takeCHS(cabezal);	
 			}
-			buscarSector(cabezal,dirLogica);
+			num=buscarSector(cabezal,dirLogica);
 		}
 	}
+	return num;
 }
 
 Nodo* mostrarLista(Nodo *lista) 
 {
 Nodo *ptr,*ptr2,*cabezal;
-int sumaTiempos=0,dir,opcion,esta;
+int sumaTiempos=0,dir,opcion,esta,num;
 struct chs CHS;char mensajeLog[100],auxLog[50];
 char datos[512];
 //HANDLE heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
@@ -122,7 +131,7 @@ ptr=lista;
 cabezal=(Nodo *)malloc(sizeof(Nodo));
 dir=leerCabezal();
 cabezal->dirLogica=dir;
-CHS=getCHS(dir);
+CHS=takeCHS(dir);
 cabezal->pista=CHS.pista;
 cabezal->proximo=NULL; 
 cabezal->tiempo=0;
@@ -140,7 +149,7 @@ while (lista!=NULL){
 		printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
 
 		if (esta==1){
-					CHS=getCHS(ptr->dirLogica);
+					CHS=takeCHS(ptr->dirLogica);
 					printf("\nSectores Leidos:%d - cache",CHS.sector);
 					
 					strcpy(mensajeLog, "Sectores Leidos: ");
@@ -162,13 +171,14 @@ while (lista!=NULL){
 			cabezal->dirLogica=ptr->dirLogica;
 			cabezal->pista=ptr->pista;
 			dir=leerCabezal();
-			CHS=getCHS(dir);
-			sumaTiempos=sumaTiempos+abs(ptr->pista-CHS.pista);
-			CHS=getCHS(ptr->dirLogica);
-			sectLeidos(ptr->dirLogica);
+			CHS=takeCHS(dir);
+			num=sectLeidos(ptr->dirLogica);
+			sumaTiempos=sumaTiempos+abs(ptr->pista-CHS.pista)+num;
+			CHS=takeCHS(ptr->dirLogica);
+			
 			
 			printf("\nTiempo consumido:%d ms",sumaTiempos);
-			printf("\nSector %d: %s\n",ptr->dirLogica,leer(ptr->dirLogica));
+			printf("\nSector %d (%d,%d,%d): %s\n",ptr->dirLogica,CHS.cabezal,CHS.pista,CHS.sector,leer(ptr->dirLogica));
 			grabarCabezal(ptr->dirLogica+1);
 	
 			strcpy(mensajeLog, "Sectores Leidos: ");
@@ -240,7 +250,7 @@ if (!(ret = db_create(&dbp, NULL, 0))){
 
 		flags = DB_CREATE;    
                        
-		if (!(ret = dbp->open(dbp, NULL, "VDA.db", NULL, DB_BTREE, flags, 0))) {
+		if (!(ret = dbp->open(dbp, NULL, vda, NULL, DB_BTREE, flags, 0))) {
 			if (dbp != NULL){ 
 				dbp->close(dbp, 0); 
 			}	
@@ -261,7 +271,7 @@ memset(&data, 0, sizeof(DBT));
 	crearBase();
 	ret = db_create(&dbp, NULL, 0);    
                        
-	ret = dbp->open(dbp, NULL, "VDA.db", NULL, DB_BTREE, 0, 0);		
+	ret = dbp->open(dbp, NULL, vda , NULL, DB_BTREE, 0, 0);		
 	
 	key.data = &clave;
 	key.size = sizeof(long);
@@ -287,7 +297,7 @@ memset(&data, 0, sizeof(DBT));
 crearBase();
 ret = db_create(&dbp, NULL, 0);
 
-ret=dbp->open(dbp, NULL, "VDA.db", NULL, DB_BTREE, 0, 0);
+ret=dbp->open(dbp, NULL, vda, NULL, DB_BTREE, 0, 0);
 clave=-1;
 key.data = &clave;
 key.size = sizeof(long);
@@ -310,7 +320,7 @@ memset(&data, 0, sizeof(DBT));
 	crearBase();
 	ret = db_create(&dbp, NULL, 0);    
                        
-	ret = dbp->open(dbp, NULL, "VDA.db", NULL, DB_BTREE, 0, 0);		
+	ret = dbp->open(dbp, NULL, vda, NULL, DB_BTREE, 0, 0);		
 	
 	clave=-1;
 	key.data = &clave;
@@ -322,7 +332,9 @@ memset(&data, 0, sizeof(DBT));
 
 
 	dbp->get(dbp, NULL, &key, &data, 0);
-	
+	if(dirLogica<0){
+		dirLogica=0;
+	}
 	
 	return(dirLogica);
 	
@@ -340,7 +352,7 @@ memset(&data, 0, sizeof(DBT));
 	crearBase();
 	ret = db_create(&dbp, NULL, 0);    
                        
-	ret = dbp->open(dbp, NULL, "VDA.db", NULL, DB_BTREE, 0, 0);
+	ret = dbp->open(dbp, NULL, vda, NULL, DB_BTREE, 0, 0);
 
 	key.data = &clave;
 	key.size = sizeof(long);
@@ -372,7 +384,7 @@ memset(&data, 0, sizeof(DBT));
 	crearBase();
 	ret = db_create(&dbp, NULL, 0);    
                        
-	ret = dbp->open(dbp, NULL, "VDA.db", NULL, DB_BTREE, 0, 0);
+	ret = dbp->open(dbp, NULL, vda, NULL, DB_BTREE, 0, 0);
 	
 	key.data = &clave;
 	key.size = sizeof(long);
@@ -381,7 +393,7 @@ memset(&data, 0, sizeof(DBT));
 	dbp->close(dbp, 0);
 }
 
-struct chs	getCHS(long dirLogica){
+struct chs	takeCHS(long dirLogica){
 	struct chs	CHS;
 	CHS.pista=(dirLogica/4);	//4 sectores, 1 cabezal , 100 cilindros
 	CHS.sector=(dirLogica%4)%4; 
@@ -389,17 +401,32 @@ struct chs	getCHS(long dirLogica){
 	return(CHS);
 }
 
+struct chs getCHS(void){
+	struct chs CHS;	
 
+	configVDA *auxiliar;
+
+	auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configVDA));
+
+
+	getConfigVDA(auxiliar);
+
+	CHS.pista=auxiliar->cilindros;
+	CHS.cabezal=auxiliar->headers;
+	CHS.sector=auxiliar->sectores;
+	return CHS;
+	
+}
 void posCabezal(void){
 	long dir; struct chs CHS;
 	dir=leerCabezal();
-	CHS=getCHS(dir);
-	printf("CHS:(%d,%d,1)\n",CHS.pista,CHS.sector);
+	CHS=takeCHS(dir);
+	printf("CHS:(1,%d,%d)\n",CHS.pista,CHS.sector);
 }
 Nodo* generarNodo(dir1){
 Nodo *nodo1;struct chs posDato;
 //HANDLE heap = HeapCreate( 0, 0, 0 );
-	posDato=getCHS(dir1);
+	posDato=takeCHS(dir1);
 	//nodo1=(Nodo *)HeapAlloc(GetProcessHeap(),HEAP_NO_SERIALIZE, sizeof(Nodo));
 	nodo1=(Nodo *)malloc(sizeof(Nodo));
 	nodo1->dirLogica=dir1;

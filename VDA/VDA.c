@@ -58,7 +58,6 @@ char x[2];
 				switch(opcion){
 					case 1:
 						printf("Escriba los sectores que desea leer\n");
-						WaitForSingleObject(hSemaphore,INFINITE);
 						while(i<3){
 							printf("Escriba la Direccion Logica:");
 							scanf("%d",&dirLogica);
@@ -69,7 +68,6 @@ char x[2];
 						}
 						mostrarLista(lista);
 						i=0;nodo=NULL;lista=NULL;
-						ReleaseSemaphore(hSemaphore,1,NULL);
 						getchar();
 					break;
 					case 2:
@@ -109,8 +107,24 @@ int main()
 	int c=0;
 	unsigned threadID,threadID2;
 	HANDLE hThread,hThread2;
+	char mensajeLog[100],auxLog[50],IPKSS[16];
+	argumentosThreads *argumentos;
+	SOCKET socketAux;
+	configVDA *auxiliar;
+	unsigned puertoKSS = 5000;
 
-	hSemaphore = CreateSemaphore(NULL,MAX_SEM_COUNT,MAX_SEM_COUNT, NULL);
+	argumentos = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(argumentosThreads));
+	socketAux = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
+	auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configVDA));
+
+
+	printLog("Main VDA","0",0,"DEBUG","Comienza VDA");
+	
+	getConfigVDA(auxiliar);
+
+	argumentos->config = auxiliar;
+	
+	strcpy(vda,auxiliar->nombreVDA);
 
 	crearBase();
 
@@ -147,7 +161,7 @@ unsigned __stdcall kss( void* pArguments )
         struct hostent *hp;char mensaje[512];
         WSADATA wsaData;
 		char mensajeLog[100],auxLog[50],IPKSS[16];
-		struct chs *CHS;			
+		struct chs CHS;			
 		argumentosThreads *argumentos;
 		SOCKET socketAux;
 		configVDA *auxiliar;
@@ -159,9 +173,6 @@ unsigned __stdcall kss( void* pArguments )
 		argumentos = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(argumentosThreads));
 		socketAux = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
 		auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configVDA));
-
-
-		printLog("Main VDA","0",0,"DEBUG","Comienza VDA");
 	
 		getConfigVDA(auxiliar);
 
@@ -202,7 +213,7 @@ unsigned __stdcall kss( void* pArguments )
 
         // copio la informacion obtenida en una esrtuctura sockaddr_in
         memset(&server, 0, sizeof(server));
-		server.sin_addr.s_addr=inet_addr("192.168.1.38");
+		server.sin_addr.s_addr=inet_addr(auxiliar->ipKSS);
         server.sin_family = AF_INET;
         server.sin_port = htons(5300);
     
@@ -241,8 +252,8 @@ unsigned __stdcall kss( void* pArguments )
 	
 		recv(conn_socket,(char *) Buffer, sizeof(Buffer),0);
 		
-		strcpy(paqueteMPS->Payload,"VDA1");
-		paqueteMPS->PayloadLenght = 4;
+		strcpy(paqueteMPS->Payload,auxiliar->nombreVDA);
+		paqueteMPS->PayloadLenght = strlen(paqueteMPS->Payload);
 		
 		send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
 		
@@ -259,10 +270,11 @@ unsigned __stdcall kss( void* pArguments )
 		
 		while(1){ 
 			recv(conn_socket,(char *) Buffer, sizeof(Buffer),0);
-			strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,3);
+			strcpy(mensaje_aux,((MPS_Package*)Buffer)->Payload);
 			if (!strcmp(mensaje_aux,"CHS")){
-			//	memcpy(paqueteMPS->Payload,,12);
-			//	paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
+				CHS=getCHS();
+				sprintf(paqueteMPS->Payload,"%d,%d,%d",CHS.cabezal,CHS.pista,CHS.sector);
+				paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
 			send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);	
 			}else{
 				strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,11);
