@@ -35,7 +35,9 @@ typedef struct nodo
 	struct nodo *proximo;
 }Nodo;
 
-void buscarSector(long, long );
+char vda[8];
+
+int buscarSector(long, long );
 int putSectores(struct infoGrabar *);
 char* getSectores(long,long);
 void crearBase(void);
@@ -43,7 +45,7 @@ void grabarCabezal(long);
 long leerCabezal(void);
 void posCabezal(void);
 void consola(void);
-struct chs getCHS(long);
+struct chs takeCHS(long);
 Nodo* atenderSector(int);
 void borrar(long);
 char* leer(long);
@@ -51,4 +53,5 @@ void grabar(long ,void *);
 Nodo* InsertarNodo(Nodo *,Nodo *);
 Nodo* mostrarLista(Nodo *);
 Nodo* algoritmo(Nodo *,Nodo *);
-void sectLeidos(long);
+int sectLeidos(long);
+struct chs getCHS(void);
