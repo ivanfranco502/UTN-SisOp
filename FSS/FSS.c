@@ -16,7 +16,7 @@
 
 
 typedef struct{
-	char DescriptorID[16];   //único, si usamos la hora + un random es suficiente.
+	char DescriptorID[16];   //ï¿½nico, si usamos la hora + un random es suficiente.
 	char PayloadDescriptor;  //tipo de operacion (handshake, vda, fss, ftp, list, cd, etc)
 	int PayloadLenght;  //longitud del payload, 0 si no enviamos nada.
 	char Payload[1050];  //mensaje.
@@ -25,7 +25,7 @@ typedef struct{
 int print_pkg (MPS_Package*);
 char* generar_DescriptorID(char *);
 char* existeArchivo (char *, char *);
-char* obtenerFuncion(char*);
+void obtenerFuncion(char *, char * );
 char* infoArchivo (char *, char *);
 char* eliminarArchivo (char *, char *);
 char* crearArchivo (char *, char *);
@@ -74,7 +74,7 @@ int main(){
 	printf("Trying to connect...\n");
 
 	remote.sin_family = AF_INET;
-	remote.sin_addr.s_addr=INADDR_ANY;
+	remote.sin_addr.s_addr=inet_addr("192.168.1.105");
 	remote.sin_port = htons (5300);
 
 	len = sizeof(struct sockaddr);
@@ -99,21 +99,21 @@ int main(){
 	}
 	else {
       		printf("Handshake OK\n");
-		while(strcmp(mensaje->Payload,"halt()")){
+		/*while(strcmp(mensaje->Payload,"halt()")){
 		    recv(s,Buffer,sizeof(Buffer),0);
                     print_pkg((MPS_Package*)Buffer);
 		    strcpy(mensaje->Payload,"FSS");
 			generar_DescriptorID(mensaje->DescriptorID);
 			mensaje->PayloadLenght=strlen(mensaje->Payload);
-			send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
-		}
+			//send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+		}*/
         }
 
 	while(1){
 		recv(s,Buffer,sizeof(Buffer),0);
+		print_pkg((MPS_Package*)Buffer);
 
-
-		strcpy(func,obtenerFuncion(((MPS_Package*)Buffer)->Payload));
+		obtenerFuncion(((MPS_Package*)Buffer)->Payload, func);
 	
 		tam=strlen(func)+1;
 		for(i=tam;i<1045;i++){
@@ -353,7 +353,7 @@ int main(){
 		z++;x++;aux[i]='\0';
 		}
 		z=0;x=0;
-		strcpy(rta,formatear(vda,val));
+		strcpy(rta,formatear(vda,val2));
 	}   
 	    if( !strcmp(func,"tieneFormato")){
                 while(stru[x-1]!=')'){
@@ -405,9 +405,8 @@ char* generar_DescriptorID(char *DescriptorID){
 	strcat(DescriptorID, num);
 	return DescriptorID;
 }
-char* obtenerFuncion(char f[50]){
+void obtenerFuncion(char *f, char *func){
 	int x=0;
-	char func[20];
 	
 
 	while(f[x]!= '('){
@@ -415,8 +414,9 @@ char* obtenerFuncion(char f[50]){
 		x++;
 	}
 	func[x]='\0';
-return func;
 }
+/*
+
 char* existeArchivo (char *vda, char *nombreArchivo){
 
 	FILE *archivo;
@@ -772,29 +772,397 @@ char* formatear (char* vda, int cantidadSectores){
 return "OK";
 
 }
+*/
 
 char* listarDirectorio (char* vda){
  DIR *dirp;
  struct dirent *direntp;
-char* func[20];
+char* func[20],msj[100],mensaje[100];
+int t=0;
          /* Abrimos el directorio */
-         sprintf(func,"/root/%s",vda);
-         dirp = opendir(func);
+
+
+		sprintf(func,"/root/%s",vda);
+        dirp = opendir(func);
 
          if (dirp == NULL){
                  return "Error: No se puede abrir el directorio";
-          }{
+          }else{
 
                         /* Leemos las entradas del directorio */
 
                          printf("i-nodo\toffset\t\tlong\tnombre\n");
 
-                         while ((direntp = readdir(dirp)) != NULL) {
-                                 printf("%d\t%d\t%d\t%s\n", direntp->d_ino, direntp->d_off, direntp->d_reclen, direntp->d_name);
-                        }
+                         while ((direntp = readdir(dirp)) != NULL){ 
+ 				printf("%d\t%d\t%d\t%s\n", direntp->d_ino, direntp->d_off, direntp->d_reclen, direntp->d_name); 
+				sprintf(mensaje,"%s,%d",direntp->d_name,direntp->d_reclen);
+                        	if(!(strcmp(direntp->d_name,".")) && !(strcmp(direntp->d_name,".."))){
+					if(t==0){
+						strcpy(msj,mensaje);
+						t=1;
+					}else{
+						strcat(msj,mensaje);
+					}
+				}
+			}
+
                 }
          /* Cerramos el directorio */
 
          closedir(dirp);
-         return "OK";
+         return msj;
 }
+
+
+char* existeArchivo (char *vda, char *nombreArchivo){
+
+	FILE *archivo;
+	char dir[60];
+
+	sprintf(dir, "%s/%s",vda,nombreArchivo);
+
+	archivo = fopen(dir,"r");
+	if (archivo==NULL){
+		return "NO";
+	}
+
+	fclose (archivo);
+
+return "OK";
+
+}
+
+char* infoArchivo (char *vda, char *nombreArchivo){
+
+
+	FILE *archivo;
+	int size;
+	char infoArchivo[500],dir[40];
+
+
+	sprintf(dir, "%s/%s",vda,nombreArchivo);
+
+	archivo = fopen(dir, "r");
+
+	fseek(archivo, 0, SEEK_END);
+	size = ftell(archivo);
+	rewind (archivo);
+
+	fgets(infoArchivo, size, archivo);
+
+
+	infoArchivo[size+1] = '\0';
+
+	printf("%s", infoArchivo);
+
+
+	fclose (archivo);
+
+
+return infoArchivo;
+
+}
+
+char* eliminarArchivo (char *vda, char *nombreArchivo){
+
+	int i=0,j=0;
+	char dir[40],info[500], listaSectores[500];
+
+	sprintf(info, "%s", infoArchivo (vda, nombreArchivo));
+
+	while (info[i] != ','){
+		i++;
+	}
+
+	i++;
+
+	while (info[i] != '\0'){
+		listaSectores[j]=info[i];
+		i++;
+		j++;
+	}
+
+	listaSectores[j]='\0';
+
+	liberarSectores (vda, listaSectores);
+	sprintf(dir, "%s/%s",vda,nombreArchivo);
+	remove(dir);
+
+return "OK";
+
+}
+
+char* crearArchivo (char *vda, char *nombreArchivo){
+
+	FILE *archivo;
+	char dir[40];
+
+	sprintf(dir, "%s/%s",vda,nombreArchivo);
+
+	archivo = fopen( dir,"w");
+
+	fclose(archivo);
+
+return "OK";
+}
+
+char* actualizarTamanio (char* vda, char* nombreArchivo, long actualiza){
+
+	FILE *archivo;
+	int i=0, j=0, k=0;
+	char info[500], nuevaInfo[500], tamanio[40], dir[100];
+
+	sprintf (info, "%s", infoArchivo ( vda, nombreArchivo ) );
+	printf ("Info Antes: %s\n", info);
+
+	snprintf (tamanio, 20, "%d", actualiza);
+	printf ("Tamanio Nuevo: %s\n", tamanio);
+
+	//Longitud Anterior
+	while (info[i] != ','){
+		i++;
+	}
+	printf ("Longitud Tamanio anterior: %d\n", i);
+
+	//Longitud Nueva
+	while (tamanio[j] != '\0'){
+		j++;
+	}
+	printf ("Longitud Tamanio nueva: %d\n", j);
+
+	//Lleno Nueva Info
+	while (k<j){
+		nuevaInfo[k]=tamanio[k];
+		k++;
+	}
+
+	while (info[i] != '\0'){
+		nuevaInfo[k]=info[i];
+		i++;
+		k++;
+	}
+	nuevaInfo[k] = '\0';
+
+	printf("Nueva Info: %s\n",nuevaInfo);
+
+	//Agrego Nueva Info Al Archivo
+	sprintf(dir, "%s/%s",vda,nombreArchivo);
+	remove (dir);
+	archivo = fopen( dir,"w");
+	fputs (nuevaInfo, archivo);
+	fclose (archivo);
+
+return "OK";
+
+}
+
+char* crearTablaSectoresLibres (char *vda, int cantidadSectores){
+
+	FILE *archivo;
+	int i=0;
+	char array[cantidadSectores], dir[40];
+
+
+
+	while (i<cantidadSectores){
+		array[i]='0';
+		i++;
+	}
+	array[i]='\0';
+
+	sprintf (dir, "%s/free_sectors",vda);
+	archivo = fopen(dir,"w");
+	fputs (array, archivo);
+
+	fclose (archivo);
+
+return "OK";
+
+}
+
+char* dosSectoresLibres (char *vda){
+
+	FILE *archivo;
+	int i=0,j;
+	char dir[40],info[500], sectores[10],nombreArchivo[]="free_sectors";
+
+	sprintf(info, "%s", infoArchivo (vda, nombreArchivo));
+
+	while ( (info[i] == '1') && (info[i] != '\0') ){
+		i++;
+	}
+
+	if (info[i] == '\0'){
+		printf ("NO HAY SUFICIENTES SECTORES LIBRES\n");
+		return "NO";
+	}
+	printf("Primer Sector Libre: %d\n",i);
+
+	j = i + 1;
+
+	while ( (info[j] == '1') && (info[j] != '\0') ){
+		j++;
+	}
+
+	if (info[j] == '\0'){
+		printf ("NO HAY SUFICIENTES SECTORES LIBRES\n");
+		return "NO";
+	}
+
+	printf("Segundo Sector Libre: %d\n",j);
+
+	//Actualizo free_sectors
+	info[i]='1';
+	info[j]='1';
+	sprintf(dir, "%s/%s", vda, nombreArchivo);
+	remove (dir);
+	archivo = fopen( dir,"w");
+	fputs (info, archivo);
+	fclose (archivo);
+
+	snprintf (sectores, 10, "%d,%d", i,j);
+	printf ("Sectores: %s\n", sectores);
+
+return sectores;
+}
+
+char* asignarSectores (char *vda, char *nombreArchivo, char *sectores){
+
+	FILE *archivo;
+	int i=0,j=0;
+	char dir[40], info[500];
+
+	sprintf(info, "%s",infoArchivo(vda, nombreArchivo));
+
+	while (info[i] != '\0'){
+		i++;
+	}
+
+	info[i] = ',';
+	i++;
+
+
+
+	while (sectores[j] != '\0'){
+		info[i]=sectores[j];
+		i++;
+		j++;
+	}
+	info[i]='\0';
+
+//	printf("info con sectores asignados: %s\n",info);
+
+
+	sprintf (dir, "%s/%s", vda,nombreArchivo);
+	remove (dir);
+	archivo = fopen (dir, "w");
+	fputs (info, archivo);
+	fclose (archivo);
+
+return "OK";
+}
+
+char* liberarSectores (char *vda, char *listaSectores){
+
+	FILE *archivo;
+	int i=0, c=0,j=0, k, sec;
+	char sectoresVda[MAX_BLOQUES], sector[6], dir[50];
+
+
+	sprintf(sectoresVda, infoArchivo (vda,"free_sectors"));
+	printf("sectores del vda: %s\n", sectoresVda);
+
+
+	//cantidad sectores a liberar
+	while (listaSectores[i] != '\0'){
+		if ( listaSectores[i] == ',' ) {
+			c++;
+		}
+		i++;
+	}
+	c = c + 1;
+	i = 0;
+
+	printf("la lista es: %s\ncantidad sectores a liberar: %d\n", listaSectores ,c);
+
+	while (j < c ){
+
+		k=0;
+
+		while ((listaSectores[i] != ',') && (listaSectores[i] != '\0') ){
+			sector[k] = listaSectores[i];
+			i++;
+			k++;
+		}
+
+		sscanf (sector, "%d", &sec);
+		printf("sector: %d\n",sec);
+		sectoresVda[sec] = '0';
+		i++;
+		j++;
+
+	}
+
+	printf("Sectores Cambiados: %s\n", sectoresVda);
+
+	sprintf(dir, "%s/%s",vda,"free_sectors");
+	remove (dir);
+	archivo = fopen( dir,"w");
+	fputs (sectoresVda, archivo);
+	fclose (archivo);
+
+return "OK";
+
+}
+
+char* tieneFormato (char *vda){
+
+	FILE *archivo;
+	char dir[40];
+
+	sprintf(dir, "%s/free_sectors", vda);
+
+	archivo = fopen (dir, "r");
+
+	if (archivo == NULL){
+		return "NO";
+	}
+
+	fclose (archivo);
+
+return "OK";
+
+}
+
+char* formatear (char* vda, int cantidadSectores){
+
+	char command1[40], command2[40], resp[4];
+
+	sprintf (resp, "%s", tieneFormato(vda) );
+
+
+	if ((strcmp(resp, "OK") == 0)){
+
+		sprintf(command1, "rm -r %s", vda);
+		system (command1);
+
+		sprintf (command2, "mkdir %s", vda);
+		system(command2);
+
+		crearTablaSectoresLibres(vda, cantidadSectores);
+
+		printf("sale por el IF!!!");
+
+		return "OK";
+
+	}
+
+	sprintf (command2, "mkdir %s", vda);
+	system(command2);
+
+	crearTablaSectoresLibres(vda, cantidadSectores);
+
+return "OK";
+
+}
+
