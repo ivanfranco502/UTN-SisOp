@@ -895,11 +895,13 @@ return "OK";
 char* crearArchivo (char *vda, char *nombreArchivo){
 
 	FILE *archivo;
-	char dir[40];
+	char dir[40], info[]="0,\0";
 
 	sprintf(dir, "%s/%s",vda,nombreArchivo);
 
+
 	archivo = fopen( dir,"w");
+	fputs(info, archivo);
 
 	fclose(archivo);
 
@@ -1050,7 +1052,7 @@ char* asignarSectores (char *vda, char *nombreArchivo, char *sectores){
 	}
 	info[i]='\0';
 
-//	printf("info con sectores asignados: %s\n",info);
+	printf("info con sectores asignados: %s\n",info);
 
 
 	sprintf (dir, "%s/%s", vda,nombreArchivo);
