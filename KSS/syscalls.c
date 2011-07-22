@@ -179,7 +179,8 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				
 				strcpy(entradaTDD->buffer, "\0");
 				j=i;
-				//cuanto la cantidad de sectores
+				entradaTDD->sector == NULL;
+				//cuento la cantidad de sectores
 				while(mensaje->Payload[j] != '\0'){
 					if(mensaje->Payload[j] == ','){
 						cantidad_sectores++;
@@ -319,6 +320,7 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumento, int socket, char* desc, int lenght){
 	unsigned int desc_tdd;
 	unsigned int sector1, sector2;
+	int sector_vacio;
 	nodoTDD* nodo_aux;
 	int socket_vda;
 	MPS_Package *mensaje;
@@ -344,23 +346,25 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 			}
 			//busco el socket de la vda
 			socket_vda = buscar_socket(lista_sockets, nodo_aux->nombreVDA);
-			sector1 = -1;
+			sector_vacio = -1;
 			if(nodo_aux->sector !=NULL){
 				sector1 = (nodo_aux->sector)->sector;
-				sector2= -1;
+				sector_vacio=1;
 				nodo_aux->sector = (nodo_aux->sector)->punteroSector;
 			}
 			if(nodo_aux->sector !=NULL){
 				sector2 = (nodo_aux->sector)->sector;
 				nodo_aux->sector = (nodo_aux->sector)->punteroSector;
 			}
-			if(sector1 == -1){
+			if(sector_vacio == -1){
 			//no hay sectores
 				strcpy(nodo_aux->buffer, "\0");
 				mensaje->PayloadDescriptor = '0';
 				strcpy(mensaje->Payload, "No hay mas datos");
 				mensaje->PayloadLenght = strlen("No hay mas datos");
+				printf("Termino el archivo, le mando al FTP: %s\n", mensaje->Payload);
 				send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+				return(Tdd);
 			}
 			else{
 			//hay sectores
@@ -393,6 +397,7 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 			strcpy(mensaje->Payload, "No se abrio para lectura");
 			mensaje->PayloadLenght = strlen("No se abrio para lectura");
 			send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+			return(Tdd);
 		}
 	}
 	else{
@@ -401,6 +406,7 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 		strcpy(mensaje->Payload, "El archivo no está abierto");
 		mensaje->PayloadLenght = strlen(mensaje->Payload);
 		send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+		return(Tdd);
 	}
 	return Tdd;
 }
@@ -530,6 +536,7 @@ int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char*
 			mensaje->PayloadLenght = strlen(mensaje->Payload);
 			send(FSS, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 			recv(FSS, buffer, sizeof(buffer), 0);
+			free(mensaje);
 			mensaje = (MPS_Package*) buffer;
 			strcpy(sectores, mensaje->Payload);
 // 3) mandar el putSectores al VDA
@@ -635,7 +642,7 @@ nodoTDD* sys_close(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 // 2) enviar al FSS el tamaño final del archivo
 			sprintf(tamanio_archivo,"%ld",nodo_aux->size);
 			mensaje->PayloadDescriptor = '6';
-			strcat(mensaje->Payload, "actualizarTamanio(");
+			strcpy(mensaje->Payload, "actualizarTamanio(");
 			strcat(mensaje->Payload, nodo_aux->nombreVDA);
 			strcat(mensaje->Payload, ",");
 			strcat(mensaje->Payload, nodo_aux->nombreArchivo);
