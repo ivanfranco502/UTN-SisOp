@@ -290,6 +290,9 @@ int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
 
 int rta_CWD (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcpy(datos_cliente->ftp_path, arg);
+	if(arg[strlen(arg)-1] != '/'){
+		strcat(datos_cliente->ftp_path,"/");	
+	}
 	//strcpy(datos_cliente->current_path, realizarCambioDeDirectorio(datos_cliente->original_path,datos_cliente->ftp_path));
 	strcpy(Response, "250 CWD command successful");
 	strcat(Response, "\r\n");

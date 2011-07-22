@@ -30,6 +30,15 @@ void generar_DescriptorID(char *DescriptorID){
 	
 }
 
+int print_pkg(MPS_Package* mensaje){
+
+        printf("Server: DescriptorID = %s\n", mensaje->DescriptorID);
+        printf("Server: \"Pay Desc = %c\"\n", mensaje->PayloadDescriptor);
+        printf("Server: \"Lenght = %d\"\n",mensaje->PayloadLenght);
+        printf("Server: \"Payload = %s\"\n",mensaje->Payload);
+	return 0;
+}
+
 int conectarConKernel(char *IPKSS, unsigned puertoKSS, MPS_Package *paqueteMPS){
 	int a;
 	int desc;
@@ -59,7 +68,20 @@ int conectarConKernel(char *IPKSS, unsigned puertoKSS, MPS_Package *paqueteMPS){
 	rmt_addr->sin_addr.s_addr = inet_addr(IPKSS);
 	rmt_addr->sin_port = htons(puertoKSS);
 
+	printf("Trying to connect...\n");
+
 	a = connect(desc,(struct sockaddr*)rmt_addr, sizeof(struct sockaddr_in));
+
+	if(a == -1){
+		printf("Error conectando con el KSS\n");
+		getchar();
+		exit(1);
+	
+	}else{
+		printf("Connected.\n");
+
+		printf("Iniciando Handshake..\n");
+	}
 
 	generar_DescriptorID(paqueteMPS->DescriptorID);
 	paqueteMPS->PayloadDescriptor = '1';
@@ -70,6 +92,12 @@ int conectarConKernel(char *IPKSS, unsigned puertoKSS, MPS_Package *paqueteMPS){
 	
 	//listen(desc,100);
 	recv(desc, Buffer, sizeof(Buffer),0);
+	if(((MPS_Package*)Buffer)->PayloadDescriptor != '1'){
+		printf("No se pudo hacer el Handshake\n");
+		getchar();
+		exit(1);
+	}
+	print_pkg((MPS_Package*)Buffer);
 
 	response = (MPS_Package *)Buffer;
 //	if(response->PayloadDescriptor == '1'){

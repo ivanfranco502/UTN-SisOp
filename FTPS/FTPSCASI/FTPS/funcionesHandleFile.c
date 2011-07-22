@@ -159,28 +159,33 @@ char *pasarListaArchivosARespuestaFTP(char *buffer){
 int enviarSyscallRead(int fileDescriptor, int socketKSS, SOCKET clienteDatos){
 	char payload[50],
 		 IDpaquete[16],
-		 buffer[1024],
+		 buffer[1100],
 		 mensaje[1025],
 		 FDescriptor[5];
 	int OK =1;
-	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
+	int a=0;
+	MPS_Package *paqueteSyscall;
 	
-	generar_DescriptorID(paqueteSyscall->DescriptorID);
-	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
-	paqueteSyscall->PayloadDescriptor = '1';
-	strcpy(payload, "sys_read(");
-	sprintf(FDescriptor,"%d", fileDescriptor);
-	strcat(payload, FDescriptor);
-	strcat(payload, ")");
-	strcpy(paqueteSyscall->Payload,payload);
-	paqueteSyscall->PayloadLenght = strlen(payload);
-	
-	send(socketKSS,(char *)paqueteSyscall, 21 + paqueteSyscall->PayloadLenght+1,0);
+	paqueteSyscall = (MPS_Package *)buffer;
 	//listen(socketKSS,100);
 	
 	do{
-		recv(socketKSS, buffer, 1024, 0);
+		generar_DescriptorID(paqueteSyscall->DescriptorID);
+		strcpy(IDpaquete, paqueteSyscall->DescriptorID);
+		paqueteSyscall->PayloadDescriptor = '1';
+		strcpy(payload, "sys_read(");
+		sprintf(FDescriptor,"%d", fileDescriptor);
+		strcat(payload, FDescriptor);
+		strcat(payload, ")");
+		strcpy(paqueteSyscall->Payload,payload);
+		paqueteSyscall->PayloadLenght = strlen(payload);
+	
+		send(socketKSS,(char *)paqueteSyscall, 21 + paqueteSyscall->PayloadLenght+1,0);
+		recv(socketKSS, buffer, 1100, 0);
 		paqueteSyscall = (MPS_Package *)buffer;
+
+		print_pkg(paqueteSyscall);
+		
 
 		if(paqueteSyscall->PayloadDescriptor != '0'){
 			memcpy(mensaje, paqueteSyscall->Payload, paqueteSyscall->PayloadLenght);
@@ -189,6 +194,7 @@ int enviarSyscallRead(int fileDescriptor, int socketKSS, SOCKET clienteDatos){
 		}else{
 			OK = 0;
 		}
+		a++;
 	}while((strcmp(paqueteSyscall->Payload, "No hay mas datos")!=0) && OK);
 		
 	return OK;
@@ -199,10 +205,13 @@ int enviarSyscallWrite(int fileDescriptor, int socketKSS, SOCKET clienteDatos){
 	char IDpaquete[16];
 	char FDescriptor[2];
 	int contador = 0;
-	char bufferAuxiliar[1024];
+	char bufferAuxiliar[1024],
+		 bufferKSS[1100];
 	int cantidadBytes = 0,
 		OK = 1;
-	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
+	MPS_Package *paqueteSyscall;
+
+	paqueteSyscall = (MPS_Package *)bufferKSS;
 
 	do{
 		generar_DescriptorID(paqueteSyscall->DescriptorID);
@@ -222,15 +231,21 @@ int enviarSyscallWrite(int fileDescriptor, int socketKSS, SOCKET clienteDatos){
 		contador = contador + cantidadBytes;
 		memcpy(payload + contador, ")", 1);
 		contador++;
+		memcpy(payload + contador, "\0",1);
+		contador++;
 
 		memcpy(paqueteSyscall->Payload,payload, contador);
-		paqueteSyscall->PayloadLenght = contador;
+		paqueteSyscall->PayloadLenght = contador-1; //como le agrego el \0
+
+		print_pkg(paqueteSyscall);
 		
 		send(socketKSS,(char *)paqueteSyscall, 21 + paqueteSyscall->PayloadLenght+1,0);
 		//listen(socketKSS,100);
-		recv(socketKSS, bufferAuxiliar, 1024, 0);
+		recv(socketKSS, bufferKSS, 1100, 0);
+
+		//print_pkg(paqueteSyscall);
 	
-		paqueteSyscall = (MPS_Package *)bufferAuxiliar;
+		paqueteSyscall = (MPS_Package *)bufferKSS;
 
 		if(paqueteSyscall->PayloadDescriptor != '0'){
 			OK = 1;

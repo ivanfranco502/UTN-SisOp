@@ -7,5 +7,6 @@ PACK(typedef struct{
         char Payload[1050];  //mensaje.
 }MPS_Package);
 
+void generar_DescriptorID(char *);
 int conectarConKernel();
-
+int print_pkg (MPS_Package*);

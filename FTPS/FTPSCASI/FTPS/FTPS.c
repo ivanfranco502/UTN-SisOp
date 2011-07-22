@@ -151,7 +151,7 @@ int main(){
 	/*--------------------------------------Fin Log Config----------------------------------*/
 
 	argumentos->descriptorSocketKernel = conectarConKernel(argumentos->config->IPKernel, argumentos->config->puertoKernel, paqueteKSS);
-	printf("%c", paqueteKSS->PayloadDescriptor);
+	//printf("%c", paqueteKSS->PayloadDescriptor);
 	if(argumentos->descriptorSocketKernel != -1){
 		paraElMain(vector_comandos);
 		
