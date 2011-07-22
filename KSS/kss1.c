@@ -251,9 +251,10 @@ int main(void)
 				retval=recv(j->socket,Buffer,sizeof(Buffer),0);
 				printf("el recv dio %d\n",retval);
 
-
+				
+				
 						//hubo una desconexion 
-				if (retval==0){
+				if (retval==0  || retval ==-1){
 					if(!strcmp(j->nombre, "FSS")){
 						fss=0;
 						Tdd = vaciarTdd(Tdd);
@@ -275,32 +276,34 @@ int main(void)
 						//hay un pedido
 				else {
 					print_pkg((MPS_Package*)Buffer);
-					if (((MPS_Package*)Buffer)->PayloadLenght==0){
-						//es un handshakeeee
-						switch (((MPS_Package*)Buffer)->PayloadDescriptor){
-							case '0':
-//                        					j->request=NULL;
-                        		break;
-                			case '1':
-//								j->request=vector_requests;
-								break;
-							default:
-//								j->request=NULL;
-								break;
-						}
-		                lista_sockets = atender_handshake(j, lista_sockets,(MPS_Package*)Buffer);
+					if(((MPS_Package*)Buffer)->PayloadDescriptor>= '0' && ((MPS_Package*)Buffer)->PayloadDescriptor<= '3'){
+						if (((MPS_Package*)Buffer)->PayloadLenght==0){
+							//es un handshakeeee
+							switch (((MPS_Package*)Buffer)->PayloadDescriptor){
+								case '0':
+//                  	      					j->request=NULL;
+									break;
+								case '1':
+//									j->request=vector_requests;
+									break;
+								default:
+//									j->request=NULL;
+									break;
+							}
+							lista_sockets = atender_handshake(j, lista_sockets,(MPS_Package*)Buffer);
 
-					}
-					else{
-						if(!strcmp(j->nombre,"FTP") && !(fss && vda_montada)){
-							//avisarle al ftp que no puede
-							strcpy(mensaje->DescriptorID, ((MPS_Package*)Buffer)->DescriptorID);
-							mensaje->PayloadDescriptor = '0';
-							strcpy(mensaje->Payload,"El sistema no está operativo. Por favor intente más tarde");
-							mensaje->PayloadLenght=strlen(mensaje->Payload);
-							send(j->socket, (char *)mensaje,21+mensaje->PayloadLenght+1,0);
-						}else{
-							Tdd = atender_request(j,(MPS_Package*)Buffer,Tdd,lista_sockets,vector_requests);
+						}
+						else{
+							if(!strcmp(j->nombre,"FTP") && !(fss && vda_montada)){
+								//avisarle al ftp que no puede
+								strcpy(mensaje->DescriptorID, ((MPS_Package*)Buffer)->DescriptorID);
+								mensaje->PayloadDescriptor = '0';
+								strcpy(mensaje->Payload,"El sistema no está operativo. Por favor intente más tarde");
+								mensaje->PayloadLenght=strlen(mensaje->Payload);
+								send(j->socket, (char *)mensaje,21+mensaje->PayloadLenght+1,0);
+							}else{
+								Tdd = atender_request(j,(MPS_Package*)Buffer,Tdd,lista_sockets,vector_requests);
+							}
 						}
 					}
 				}

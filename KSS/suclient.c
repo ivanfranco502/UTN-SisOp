@@ -40,7 +40,7 @@ int main(void){
 	char desc[10];
 	char llamada[40];
 	
-	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+	mensaje = Buffer;
 	generar_DescriptorID(mensaje->DescriptorID);
 //	strcpy(mensaje->DescriptorID, "aiofnusany");
 	mensaje->PayloadDescriptor='0';
@@ -161,7 +161,16 @@ int main(void){
 					recv(s, Buffer,sizeof(Buffer),0);
 					mensaje = (MPS_Package*)Buffer;
 					strcpy(desc,mensaje->Payload);
-					do{
+					mensaje->PayloadDescriptor = '1';
+					strcpy(mensaje->Payload,"sys_read(");
+					strcat(mensaje->Payload,desc);
+					strcat(mensaje->Payload,")");
+					mensaje->PayloadLenght = strlen(mensaje->Payload);
+					send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+					recv(s, Buffer,sizeof(Buffer),0);
+					mensaje = (MPS_Package*) Buffer;
+					while(mensaje->PayloadDescriptor == '1'){
+						fprintf(archivo, "%s", mensaje->Payload,sizeof(char));
 						mensaje->PayloadDescriptor = '1';
 						strcpy(mensaje->Payload,"sys_read(");
 						strcat(mensaje->Payload,desc);
@@ -170,8 +179,8 @@ int main(void){
 						send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
 						recv(s, Buffer,sizeof(Buffer),0);
 						mensaje = (MPS_Package*) Buffer;
-						fwrite(mensaje->Payload,sizeof(char), mensaje->PayloadLenght, archivo);
-					}while(mensaje->PayloadDescriptor == '1');
+					}
+					//fprintf(archivo, "%c",'\0');
 					mensaje->PayloadDescriptor = '1';
 					strcpy(mensaje->Payload,"sys_close(");
 					strcat(mensaje->Payload,desc);
