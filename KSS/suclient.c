@@ -170,7 +170,8 @@ int main(void){
 					recv(s, Buffer,sizeof(Buffer),0);
 					mensaje = (MPS_Package*) Buffer;
 					while(mensaje->PayloadDescriptor == '1'){
-						fprintf(archivo, "%s", mensaje->Payload,sizeof(char));
+						//fprintf(archivo, "%s", mensaje->Payload,sizeof(char));
+						fwrite(mensaje->Payload, sizeof(char), mensaje->PayloadLenght, archivo);
 						mensaje->PayloadDescriptor = '1';
 						strcpy(mensaje->Payload,"sys_read(");
 						strcat(mensaje->Payload,desc);

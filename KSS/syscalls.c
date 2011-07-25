@@ -57,7 +57,7 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 	char tipo_de_apertura;
 	char vda[5];
 	char nombre_archivo[31];
-	char buffer[30];
+	char buffer[20000];
 	nodoTDD* aux;
 	int flag = 1;
 	MPS_Package *mensaje;
@@ -174,6 +174,7 @@ nodoTDD* sys_open(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				tamanio_archivo[i]='\0';
 				printf("tamaño archivo char %s",tamanio_archivo);
 				//paso el tamaño del archivo a long y lo guardo en la tdd
+				entradaTDD->enviados = 0;
 				sscanf(tamanio_archivo, "%ld", &entradaTDD->size);
 				printf("tamaño del archivo %ld\n", entradaTDD->size);
 				
@@ -328,6 +329,7 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 	char sectores[1025];
 	char sect1[6];
 	char sect2[6];
+	Sector *sector_aux;
 	
 	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
 	strcpy(mensaje->DescriptorID, desc);
@@ -346,7 +348,7 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 			}
 			//busco el socket de la vda
 			socket_vda = buscar_socket(lista_sockets, nodo_aux->nombreVDA);
-			sector_vacio = -1;
+			/*sector_vacio = -1;
 			if(nodo_aux->sector !=NULL){
 				sector1 = (nodo_aux->sector)->sector;
 				sector_vacio=1;
@@ -355,8 +357,8 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 			if(nodo_aux->sector !=NULL){
 				sector2 = (nodo_aux->sector)->sector;
 				nodo_aux->sector = (nodo_aux->sector)->punteroSector;
-			}
-			if(sector_vacio == -1){
+			}*/
+			if(!(nodo_aux->size - nodo_aux->enviados)){
 			//no hay sectores
 				strcpy(nodo_aux->buffer, "\0");
 				mensaje->PayloadDescriptor = '0';
@@ -368,6 +370,14 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 			}
 			else{
 			//hay sectores
+				sector1 = (nodo_aux->sector)->sector;
+				sector_aux = nodo_aux->sector;
+				nodo_aux->sector = (nodo_aux->sector)->punteroSector;
+				free(sector_aux);
+				sector2 = (nodo_aux->sector)->sector;
+				sector_aux = nodo_aux->sector;
+				nodo_aux->sector = (nodo_aux->sector)->punteroSector;
+				free(sector_aux);
 				sprintf(sect1,"%d",sector1);
 				sprintf(sect2,"%d",sector2);
 				mensaje->PayloadDescriptor = '2';
@@ -377,6 +387,7 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				strcat(mensaje->Payload, sect2);
 				strcat(mensaje->Payload, ")");
 				mensaje->PayloadLenght = strlen(mensaje->Payload);
+				printf("Le pido al VDA esto: %s\n", mensaje->Payload);
 				send(socket_vda, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 				recv(socket_vda, buffer, sizeof(buffer),0);
 				print_pkg((MPS_Package *)buffer);
@@ -387,7 +398,12 @@ nodoTDD* sys_read(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argumen
 				strcpy(nodo_aux->buffer, sectores);
 				mensaje->PayloadDescriptor = '1';
 				strcpy(mensaje->Payload, sectores);
-				mensaje->PayloadLenght = 1024;
+				if(nodo_aux->size - nodo_aux->enviados >= 1024){
+					mensaje->PayloadLenght = 1024;
+				}else{
+					mensaje->PayloadLenght = nodo_aux->size - nodo_aux->enviados;
+				}
+				nodo_aux->enviados += mensaje->PayloadLenght;
 				send(socket, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
 			}
 		}
@@ -455,8 +471,8 @@ nodoTDD* sys_write(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, char* argume
 				nodo_aux=nodo_aux->siguiente;
 			}
 			rellenar_sectores(sectores, tamanio_archivo);
-			printf("rellene los sectores\n");
-			memcpy(nodo_aux->buffer, sectores, tamanio_archivo);
+			//printf("rellene los sectores\n");
+			memcpy(nodo_aux->buffer, sectores, 1024);
 // 3) llamar a sysflush
 			respuesta_sys_flush = sys_flush(Tdd, lista_sockets, socket, desc, desc_tdd);
 // 4) actualizar tamanio en la TDD
@@ -505,7 +521,7 @@ int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char*
 		char dato1[512];
 		long dir2;
 		char dato2[512];	
-	};
+	}__attribute__ ((__packed__));
 	struct infoGrabar *estructura;
 	char sectores[12];
 	char sector1[6];
@@ -558,12 +574,15 @@ int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char*
 		
 				sscanf(sector1, "%ld",&estructura->dir1);
 				sscanf(sector2, "%ld",&estructura->dir2);
-				for(i=0;i<512;i++){
+				memcpy(estructura->dato1, Tdd->buffer, 512);
+				memcpy(estructura->dato2, Tdd->buffer + 512, 512);
+				printf("\ndir1: %ld\ndir2: %ld\ndato1: %s\ndato2: %s\n\n", estructura->dir1, estructura->dir2, estructura->dato1, estructura->dato2);
+				/*for(i=0;i<512;i++){
 					estructura->dato1[i] = Tdd->buffer[i];
 				}
 				for(i=512;i<1024;i++){
 					estructura->dato2[i-512] = Tdd->buffer[i];
-				}
+				}*/
 				//mando el putSectores
 				mensaje->PayloadDescriptor = '3';
 				strcpy(mensaje->Payload, "putSectores(");		
@@ -574,6 +593,7 @@ int sys_flush(nodoTDD* Tdd, nodo_lista_sockets* lista_sockets, int socket, char*
 				mensaje->PayloadLenght = 1045;
 				socket_vda = buscar_socket(lista_sockets, Tdd->nombreVDA);
 				send(socket_vda, (char *)mensaje, 21+mensaje->PayloadLenght+1, MSG_NOSIGNAL);
+				recv(socket_vda, buffer, sizeof(buffer),0);
 // 4) asignar ambos sectores al archivo en el FSS
 				Tdd->sector=generar_insertar_sector(Tdd->sector, estructura->dir1);
 				Tdd->sector=generar_insertar_sector(Tdd->sector, estructura->dir2);
@@ -814,6 +834,9 @@ int buscar_tipo_apertura(nodoTDD* Tdd, unsigned int desc_tdd){
 int rellenar_sectores(char* sectores, int desde){
 	if(desde<1024){
 		memset(sectores+desde, '\0', 1024-desde);
+		printf("rellene los sectores\n");
+	}else{
+		printf("NO rellene los sectores pq ya eran 1024\n");
 	}
 	return(0);
 }

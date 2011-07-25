@@ -12,6 +12,7 @@ typedef struct nTDD{
         char buffer[1025]; // toda lectura o escritura se realiza en bloques de tamanio fijo 1k
         Sector* sector; // struct con el numero de sector + puntero al proximo num de sector
         int FTP;
+		long enviados;
 		struct nTDD* siguiente;
 }nodoTDD;
 
