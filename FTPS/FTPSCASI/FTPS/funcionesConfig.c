@@ -23,7 +23,7 @@ int obtenerParametroParaStruct(char *buffer, char *variableParametro, int arranc
 }
 
 void obtenerStructFTP(char *buffer, configFTP *configuracionInicial){
-	char *variableParametro[100];
+	char variableParametro[100];
 	int contadorBuffer=0;
 
 	//ipServer

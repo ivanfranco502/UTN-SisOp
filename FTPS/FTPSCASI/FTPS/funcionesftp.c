@@ -119,9 +119,7 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 				fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "0");
 			ReleaseMutex(datos_cliente->socketOcupado);
 			if(fileDescriptor > -1){
-				WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
-					resultadoOperacion = enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS, clienteDatos);
-				ReleaseMutex(datos_cliente->socketOcupado);
+				resultadoOperacion = enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS, clienteDatos, datos_cliente->socketOcupado);
 				if(resultadoOperacion){
 					datos_cliente->thDatosOK = 1;
 				}else{
@@ -153,9 +151,7 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
 				fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "1");
 			ReleaseMutex(datos_cliente->socketOcupado);
-			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
-				resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, clienteDatos);
-			ReleaseMutex(datos_cliente->socketOcupado);
+			resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, clienteDatos, datos_cliente->socketOcupado);
 			if(resultadoOperacion){
 				datos_cliente->thDatosOK = 1;
 			}else{

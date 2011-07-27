@@ -2,11 +2,11 @@
 
 int enviarSyscallOpen(char *, int, char *);
 int enviarSyscallClose(int, int);
-void enviarSyscallList(char *, int, char *);
-int enviarSyscallRead(int, int, SOCKET);
-int enviarSyscallWrite(int, int, SOCKET);
+char *enviarSyscallList(char *, int);
+int enviarSyscallRead(int, int, SOCKET, HANDLE);
+int enviarSyscallWrite(int, int, SOCKET, HANDLE);
 
-void pasarListaArchivosARespuestaFTP(char *, char *);
+char *pasarListaArchivosARespuestaFTP(char *);
 
 /*char *obtenerMesEscrito(SYSTEMTIME);
 char *obtenerFechaCreacion(WIN32_FIND_DATAA);
