@@ -11,7 +11,9 @@ int enviarSyscallOpen(char *arg, int socketKSS, char *modoApertura){
 	char IDpaquete[16];
 	char buffer[100];
 	int fileDescriptor;
-	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
+	MPS_Package *paqueteSyscall;
+
+	paqueteSyscall = (MPS_Package *)buffer;
 	
 	generar_DescriptorID(paqueteSyscall->DescriptorID);
 	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
@@ -46,7 +48,9 @@ int enviarSyscallClose(int fileDescriptor, int socketKSS){
 		 IDpaquete[16],
 		 buffer[100],
 		 FDescriptor[5];
-	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
+	MPS_Package *paqueteSyscall;
+
+	paqueteSyscall = (MPS_Package *)buffer;
 	
 	generar_DescriptorID(paqueteSyscall->DescriptorID);
 	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
@@ -74,12 +78,13 @@ int enviarSyscallClose(int fileDescriptor, int socketKSS){
 	}
 }
 
-char *enviarSyscallList(char *pathFTP, int socketKSS){
+void enviarSyscallList(char *pathFTP, int socketKSS, char *mensaje){
 	char payload[50];
 	char IDpaquete[16];
 	char buffer[1024];
-	char mensaje[1024];
-	MPS_Package *paqueteSyscall = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(MPS_Package));
+	MPS_Package *paqueteSyscall;
+
+	paqueteSyscall = (MPS_Package *)buffer;
 	
 	generar_DescriptorID(paqueteSyscall->DescriptorID);
 	strcpy(IDpaquete, paqueteSyscall->DescriptorID);
@@ -96,22 +101,19 @@ char *enviarSyscallList(char *pathFTP, int socketKSS){
 	
 	paqueteSyscall = (MPS_Package *)buffer;
 	if(paqueteSyscall->PayloadDescriptor == '1'){
-		strcpy(mensaje, pasarListaArchivosARespuestaFTP(paqueteSyscall->Payload));
-		return mensaje;
+		pasarListaArchivosARespuestaFTP(paqueteSyscall->Payload, mensaje);
 	}else{
 		strcpy(mensaje, "");
-		return mensaje;
 	}
 }
 
-char *pasarListaArchivosARespuestaFTP(char *buffer){
+void pasarListaArchivosARespuestaFTP(char *buffer, char *mensaje){
 	int argumentosPasados = 1,
 		contadorBuffer = 0,
 		contadorArgumento = 0,
 		yaCargueArchivo = 0,
 		AuxiliarSize = 0;
-	char mensaje[1024],
-		 argumento[50],
+	char argumento[50],
 		 nombreArchivo[50],
 		 lineaArchivo[100];
 
@@ -153,7 +155,6 @@ char *pasarListaArchivosARespuestaFTP(char *buffer){
 		}
 	}
 	strcat(mensaje, "\r\n");
-	return mensaje;
 }
 
 int enviarSyscallRead(int fileDescriptor, int socketKSS, SOCKET clienteDatos){
