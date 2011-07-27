@@ -8,7 +8,7 @@ typedef struct{
 
 
 
-int print_pkg (MPS_Package*);
+int print_pkg (MPS_Package *);
 char* generar_DescriptorID(char *);
 char* existeArchivo (char *, char *);
 void obtenerFuncion(char *, char * );

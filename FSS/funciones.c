@@ -8,12 +8,10 @@
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "funciones.h"
 
 #define SOCK_PATH "echo_socket"
 #define MAX_BLOQUES 50000
-
-
-
 
 
 int print_pkg(MPS_Package* mensaje){
@@ -24,6 +22,7 @@ int print_pkg(MPS_Package* mensaje){
         printf("Server: \"Payload = %s\"\n",mensaje->Payload);
 	return 0;
 }
+
 char* generar_DescriptorID(char *DescriptorID){
 	time_t tiempo;
 	char tpo[11], num[6];
@@ -40,6 +39,7 @@ char* generar_DescriptorID(char *DescriptorID){
 	strcat(DescriptorID, num);
 	return DescriptorID;
 }
+
 void obtenerFuncion(char *f, char *func){
 	int x=0;
 
@@ -50,7 +50,6 @@ void obtenerFuncion(char *f, char *func){
 	}
 	func[x]='\0';
 }
-
 
 void listarDirectorio (char *vda, char *rta){
       DIR *dirp;
@@ -90,10 +89,10 @@ void listarDirectorio (char *vda, char *rta){
 	                                      				}
 												strcat(rta,mensaje);
 
-                                          }
+                                     }
 
-								}
-							}
+                               }
+						}
 
 				}
          /* Cerramos el directorio */
@@ -101,7 +100,6 @@ void listarDirectorio (char *vda, char *rta){
     closedir(dirp);
 
 }
-
 
 char* existeArchivo (char *vda, char *nombreArchivo){
 
@@ -148,11 +146,10 @@ void infoArchivo (char *vda, char *nombreArchivo, char *info){
 	fclose (archivo);
 }
 
-
 char* eliminarArchivo (char *vda, char *nombreArchivo){
 
 	int i=0,j=0;
-	char dir[100],info[20000], listaSectores[500];
+	char dir[100],info[50000], listaSectores[500];
 
 	infoArchivo (vda, nombreArchivo, info);
 
@@ -198,27 +195,27 @@ char* actualizarTamanio (char* vda, char* nombreArchivo, double actualiza){
 
 	FILE *archivo;
 	int i=0, j=0, k=0;
-	char info[20000], nuevaInfo[20000], tamanio[40], dir[100];
+	char info[50000], nuevaInfo[50000], tamanio[40], dir[100];
 
 	infoArchivo ( vda, nombreArchivo, info);
-	printf ("Info Antes: %s\n", info);
+//	printf ("Info Antes: %s\n", info);
 
 
 
 	sprintf (tamanio, "%.0f", actualiza);
-	printf ("Tamanio Nuevo: %s\n", tamanio);
+//	printf ("Tamanio Nuevo: %s\n", tamanio);
 
 	//Longitud Anterior
 	while (info[i] != ','){
 		i++;
 	}
-	printf ("Longitud Tamanio anterior: %d\n", i);
+//	printf ("Longitud Tamanio anterior: %d\n", i);
 
 	//Longitud Nueva
 	while (tamanio[j] != '\0'){
 		j++;
 	}
-	printf ("Longitud Tamanio nueva: %d\n", j);
+//	printf ("Longitud Tamanio nueva: %d\n", j);
 
 	//Lleno Nueva Info
 	while (k<j){
@@ -274,7 +271,7 @@ void dosSectoresLibres (char *vda, char* sectores){
 
 	FILE *archivo;
 	int i=0,j;
-	char dir[100],info[20000], nombreArchivo[]="free_sectors";
+	char dir[100],info[50000], nombreArchivo[]="free_sectors";
 
 	infoArchivo (vda, nombreArchivo, info);
 
@@ -315,14 +312,13 @@ void dosSectoresLibres (char *vda, char* sectores){
 	snprintf (sectores, 10, "%d,%d", i,j);
 	//printf ("Sectores: %s\n", sectores);
 
-
 }
 
 char* asignarSectores (char *vda, char *nombreArchivo, char *sectores){
 
 	FILE *archivo;
 	int i=0,j=0;
-	char dir[100], info[20000];
+	char dir[100], info[50000];
 
 	infoArchivo(vda, nombreArchivo, info);
 	printf ("La informacion antes de asignar sectores : %s\n", info);
@@ -351,7 +347,7 @@ char* asignarSectores (char *vda, char *nombreArchivo, char *sectores){
 	*/
     printf("Los sectores que me mandaron son: %s\n", sectores);
 
-	printf("info con sectores asignados: %s\n",info);
+//	printf("info con sectores asignados: %s\n",info);
 
 	sprintf (dir, "./%s/%s", vda,nombreArchivo);
 	remove (dir);
@@ -383,7 +379,7 @@ char* liberarSectores (char *vda, char *listaSectores){
 	c = c + 1;
 	i = 0;
 
-	printf("la lista es: %s\ncantidad sectores a liberar: %d\n", listaSectores ,c);
+//	printf("la lista es: %s\ncantidad sectores a liberar: %d\n", listaSectores ,c);
 
 	while (j < c ){
 
@@ -469,7 +465,7 @@ return "OK";
 void tamanioArchivo (char *vda, char *nombre, char *tamanio){
 
 	int i=0;
-	char info[400];
+	char info[50000];
 
 
 	infoArchivo(vda, nombre, info);
