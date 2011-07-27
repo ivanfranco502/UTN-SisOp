@@ -115,15 +115,21 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 			/*---------------------------------------------------------------*/
 
 			//send (clienteDatos, datos_cliente->buffer, strlen(datos_cliente->buffer), 0);	
-			fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "0");
+			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
+				fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "0");
+			ReleaseMutex(datos_cliente->socketOcupado);
 			if(fileDescriptor > -1){
-				resultadoOperacion = enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS, clienteDatos);
+				WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
+					resultadoOperacion = enviarSyscallRead(fileDescriptor, datos_cliente->socketKSS, clienteDatos);
+				ReleaseMutex(datos_cliente->socketOcupado);
 				if(resultadoOperacion){
 					datos_cliente->thDatosOK = 1;
 				}else{
 					datos_cliente->thDatosOK = 0;
 				}
-				resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+				WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
+					resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+				ReleaseMutex(datos_cliente->socketOcupado);
 				if(resultadoOperacion){
 					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
 				}else{
@@ -144,14 +150,20 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 			/*---------------------------------------------------------------*/
 	
 //			send(datos_cliente->socket_comando, "150 Opening BINARY mode" , strlen("150 Opening BINARY mode"),0);
-			fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "1");
-			resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, clienteDatos);
+			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
+				fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "1");
+			ReleaseMutex(datos_cliente->socketOcupado);
+			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
+				resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, clienteDatos);
+			ReleaseMutex(datos_cliente->socketOcupado);
 			if(resultadoOperacion){
 				datos_cliente->thDatosOK = 1;
 			}else{
 				datos_cliente->thDatosOK = 0;
 			}
-			resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
+				resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+			ReleaseMutex(datos_cliente->socketOcupado);
 			if(resultadoOperacion){
 				printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
 			}else{
@@ -168,8 +180,9 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 			/*---------------------------------------------------------------*/
 			printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Voy a mandar");
 			/*---------------------------------------------------------------*/
-
-			strcpy(message, enviarSyscallList(datos_cliente->ftp_path, datos_cliente->socketKSS));
+			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
+				enviarSyscallList(datos_cliente->ftp_path, datos_cliente->socketKSS, message);
+			ReleaseMutex(datos_cliente->socketOcupado);
 			strcpy(datos_cliente->buffer, message);
 
 			send (clienteDatos, datos_cliente->buffer, strlen(datos_cliente->buffer), 0);
@@ -195,10 +208,12 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 
 
 int rta_PASV (char *Response, char *arg,reg_cliente *datos_cliente){
+	char aux[26];
 	datos_cliente->hThreadDatos = (HANDLE) _beginthreadex(NULL,0, &threadDeDatos, (void*) datos_cliente, 0, NULL);
 	WaitForSingleObject(datos_cliente->evento1,INFINITE);
 	strcpy(Response, "227 Entering Passive Mode");
-	strcat(Response, obtenerParametrosParaPASV(datos_cliente->IP, datos_cliente->puerto_datos));
+	obtenerParametrosParaPASV(datos_cliente->IP, datos_cliente->puerto_datos, aux);
+	strcat(Response, aux);
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 
@@ -222,13 +237,17 @@ int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
 	//borrarArchivo(datos_cliente->current_path, arg); //funcion HandleFile
 	//if(!socketOcupado){
 	//	socketOcupado = 1;
+	strcpy(argumentoCompleto, datos_cliente->ftp_path);
+	strcat(argumentoCompleto, arg);
+	
 	WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
-		strcpy(argumentoCompleto, datos_cliente->ftp_path);
-		strcat(argumentoCompleto, arg);
-
 		fileDescriptor = enviarSyscallOpen(argumentoCompleto, datos_cliente->socketKSS, "2");
-		if(fileDescriptor > -1){
+	ReleaseMutex(datos_cliente->socketOcupado);
+		
+	if(fileDescriptor > -1){
+		WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);	
 			resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+		ReleaseMutex(datos_cliente->socketOcupado);
 			if(resultadoOperacion){
 				strcpy(Response, "250 DELE command successful");
 				strcat(Response, "\r\n");
@@ -236,11 +255,11 @@ int rta_DELE (char *Response,char *arg,reg_cliente *datos_cliente){
 				strcpy(Response, "450 el archivo no pudo eliminarse");
 				strcat(Response, "\r\n");
 			}
-		}else{
-			strcpy(Response, "550 archivo no encontrado");
-			strcat(Response,"\r\n");
-		}
-	ReleaseMutex(datos_cliente->socketOcupado);
+	}else{
+		strcpy(Response, "550 archivo no encontrado");
+		strcat(Response,"\r\n");
+	}
+	
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
 }
@@ -268,8 +287,7 @@ int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
 	//leerArchivosDeCarpeta(datos_cliente->current_path, &message);
 //	if(!socketOcupado){
 //		socketOcupado = 1;
-	WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
-				 
+	
 	strcpy(Response, "150 Opening ");
 	strcat(Response, datos_cliente->type);
 	strcat(Response, " mode data connection for file list");
@@ -282,7 +300,6 @@ int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
 	WaitForSingleObject(datos_cliente->hThreadDatos, INFINITE); // espero que termine el thread de datos
-	ReleaseMutex(datos_cliente->socketOcupado);
 	CloseHandle(datos_cliente->hThreadDatos);
 	send(datos_cliente->socket_comando,"226 Transfer Complete\r\n", strlen("226 Transfer Complete\r\n"),0);
 	return 0;
@@ -326,7 +343,6 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	//getDataFromFile(datos_cliente->original_path, arg, datos_cliente->buffer);
 //	if(!socketOcupado){
 //		socketOcupado = 1;
-	WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
 		strcpy(argumentoCompleto, datos_cliente->ftp_path);
 		strcat(argumentoCompleto, arg);
 		strcpy(auxiliarPath, datos_cliente->ftp_path);
@@ -351,7 +367,6 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 		}
 		strcpy(datos_cliente->ftp_path, auxiliarPath);
 //		socketOcupado = 0;
-	ReleaseMutex(datos_cliente->socketOcupado);
 	CloseHandle(datos_cliente->hThreadDatos);
 	strcat(Response,"\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
@@ -378,7 +393,6 @@ int rta_STOR (char *Response, char *arg, reg_cliente *datos_cliente){
 
 //	if(!socketOcupado){
 //		socketOcupado = 1;
-	WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
 		strcpy(argumentoCompleto, datos_cliente->ftp_path);
 		strcat(argumentoCompleto, arg);
 		strcpy(auxiliarPath, datos_cliente->ftp_path);
@@ -405,7 +419,6 @@ int rta_STOR (char *Response, char *arg, reg_cliente *datos_cliente){
 
 		strcat(Response,"\r\n");
 		//socketOcupado = 0;
-	ReleaseMutex(datos_cliente->socketOcupado);
 		CloseHandle(datos_cliente->hThreadDatos);
 		send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	return 0;
@@ -420,11 +433,10 @@ int rta_USER (char *Response, char *arg,reg_cliente *datos_cliente){
 	return 0;
 }
 
-char *obtenerComando(char *comando){
+void obtenerComando(char *comando, char *comandoObtenido){
 	int n, 
 		pasoComando,
 		aux;
-	char comandoObtenido[10];
 
 	n = 0;
 	pasoComando = 0;
@@ -441,14 +453,12 @@ char *obtenerComando(char *comando){
 		n++;
 	}
 	comandoObtenido[aux] = '\0';
-	return (comandoObtenido);
 }
-char *obtenerParametro(char *comando){
+void obtenerParametro(char *comando, char *parametro){
  int n, 
   pasoComando,
   aux,
   caracteresPasandoComando;
- char parametro[30];
  
  n = 0;
  pasoComando = 0;
@@ -469,13 +479,10 @@ char *obtenerParametro(char *comando){
   n++;
  }
  parametro[aux] = '\0';
-
- return (parametro);
 }
 
-char *obtenerParametrosParaPASV(char *IP, unsigned puerto){
-	char parametrosPASV[26],
-		 ipModificada[18],
+void obtenerParametrosParaPASV(char *IP, unsigned puerto, char *parametrosPASV){
+	char ipModificada[18],
 		 puertoAux[4];
 	unsigned puertoDiv,
 			 puertoRes;
