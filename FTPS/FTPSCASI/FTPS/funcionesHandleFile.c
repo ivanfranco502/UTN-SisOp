@@ -182,8 +182,6 @@ int enviarSyscallRead(int fileDescriptor, int socketKSS, SOCKET clienteDatos, HA
 	
 		WaitForSingleObject(socketOcupado, INFINITE);
 			send(socketKSS,(char *)paqueteSyscall, 21 + paqueteSyscall->PayloadLenght+1,0);
-		ReleaseMutex(socketOcupado);
-		WaitForSingleObject(socketOcupado, INFINITE);
 			recv(socketKSS, buffer, 1100, 0);
 		ReleaseMutex(socketOcupado);
 		paqueteSyscall = (MPS_Package *)buffer;
@@ -258,9 +256,6 @@ int enviarSyscallWrite(int fileDescriptor, int socketKSS, SOCKET clienteDatos, H
 			//print_pkg(paqueteSyscall);
 			WaitForSingleObject(socketOcupado, INFINITE);
 				send(socketKSS,(char *)paqueteSyscall, 21 + paqueteSyscall->PayloadLenght+1,0);
-			ReleaseMutex(socketOcupado);
-			//listen(socketKSS,100);
-			WaitForSingleObject(socketOcupado, INFINITE);
 				recv(socketKSS, bufferKSS, 1100, 0);
 			ReleaseMutex(socketOcupado);
 
