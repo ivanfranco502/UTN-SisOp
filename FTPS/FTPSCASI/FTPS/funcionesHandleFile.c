@@ -238,6 +238,20 @@ int enviarSyscallWrite(int fileDescriptor, int socketKSS, SOCKET clienteDatos, H
 			memcpy(payload + contador, "\0",1);
 			contador++;
 
+		contador = 0;
+		contador = strlen("sys_write(");
+		memcpy(payload, "sys_write(", contador);
+		sprintf(FDescriptor,"%d", fileDescriptor);
+		memcpy(payload + contador, FDescriptor, 1);
+		contador++;
+		memcpy(payload + contador, ",", 1);
+		contador++;
+		memcpy(payload + contador, bufferAuxiliar, cantidadBytes);
+		contador = contador + cantidadBytes;
+		memcpy(payload + contador, ")", 1);
+		contador++;
+		memcpy(payload + contador, "\0",1);
+		contador++;
 			memcpy(paqueteSyscall->Payload,payload, contador);
 			paqueteSyscall->PayloadLenght = contador-1; //como le agrego el \0
 

@@ -74,8 +74,8 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
     corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
     buffer[corrector]='\0';
 	
-	obtenerComando(buffer, comando);
-	obtenerParametro(buffer, argumento);
+	strcpy(comando, obtenerComando(buffer));
+	strcpy(argumento, obtenerParametro(buffer));
 
 	/*-----------------------------COMANDO Y ARGUMENTO----------------------------------*/
 	strcpy(mensajeLog, comando);
@@ -88,8 +88,8 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		command_handler(vector_comandos, comando, argumento, datos_cliente);
 		corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
 		buffer[corrector]='\0';
-		obtenerComando(buffer, comando);
-		obtenerParametro(buffer, argumento);
+		strcpy(comando, obtenerComando(buffer));
+		strcpy(argumento, obtenerParametro(buffer));
 
 /*		-----------------------------COMANDO Y ARGUMENTO----------------------------------*/
 		strcpy(mensajeLog, comando);

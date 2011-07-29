@@ -26,7 +26,7 @@ typedef struct 	{
 
 void paraElMain(t_command_handler *);
 char *seleccionadorDeRespuesta (char *, char *, char *, char *, int);
-void obtenerComando (char *, char *);
-void obtenerParametro (char *, char *);
-void obtenerParametrosParaPASV(char *, unsigned, char *);
+char *obtenerComando (char *comando);
+char *obtenerParametro (char *comando);
+char *obtenerParametrosParaPASV(char *, unsigned);
 int command_handler(t_command_handler *, char *, char *, reg_cliente *);
