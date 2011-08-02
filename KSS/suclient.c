@@ -151,7 +151,6 @@ int main(void){
 					printf("entre al md5sum\n");
 					strcpy(argumento,mensaje->Payload);
 					memcpy(nombre, argumento+13, mensaje->PayloadLenght - 12);
-					archivo = fopen(nombre,"w");
 					mensaje->PayloadDescriptor = '1';
 					strcpy(mensaje->Payload,"sys_open(0,");
 					strcat(mensaje->Payload,argumento+7);
@@ -160,18 +159,9 @@ int main(void){
 					send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
 					recv(s, Buffer,sizeof(Buffer),0);
 					mensaje = (MPS_Package*)Buffer;
-					strcpy(desc,mensaje->Payload);
-					mensaje->PayloadDescriptor = '1';
-					strcpy(mensaje->Payload,"sys_read(");
-					strcat(mensaje->Payload,desc);
-					strcat(mensaje->Payload,")");
-					mensaje->PayloadLenght = strlen(mensaje->Payload);
-					send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
-					recv(s, Buffer,sizeof(Buffer),0);
-					mensaje = (MPS_Package*) Buffer;
-					while(mensaje->PayloadDescriptor == '1'){
-						//fprintf(archivo, "%s", mensaje->Payload,sizeof(char));
-						fwrite(mensaje->Payload, sizeof(char), mensaje->PayloadLenght, archivo);
+					if(mensaje->PayloadDescriptor == '1'){
+						archivo = fopen(nombre,"w");
+						strcpy(desc,mensaje->Payload);
 						mensaje->PayloadDescriptor = '1';
 						strcpy(mensaje->Payload,"sys_read(");
 						strcat(mensaje->Payload,desc);
@@ -180,19 +170,35 @@ int main(void){
 						send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
 						recv(s, Buffer,sizeof(Buffer),0);
 						mensaje = (MPS_Package*) Buffer;
+						while(mensaje->PayloadDescriptor == '1'){
+							//fprintf(archivo, "%s", mensaje->Payload,sizeof(char));
+							fwrite(mensaje->Payload, sizeof(char), mensaje->PayloadLenght, archivo);
+							mensaje->PayloadDescriptor = '1';
+							strcpy(mensaje->Payload,"sys_read(");
+							strcat(mensaje->Payload,desc);
+							strcat(mensaje->Payload,")");
+							mensaje->PayloadLenght = strlen(mensaje->Payload);
+							//print_pkg(mensaje);
+							send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+							recv(s, Buffer,sizeof(Buffer),0);
+							mensaje = (MPS_Package*) Buffer;
+						}
+						//fprintf(archivo, "%c",'\0');
+						mensaje->PayloadDescriptor = '1';
+						strcpy(mensaje->Payload,"sys_close(");
+						strcat(mensaje->Payload,desc);
+						strcat(mensaje->Payload,")");
+						mensaje->PayloadLenght = strlen(mensaje->Payload);
+						send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
+						recv(s, Buffer,sizeof(Buffer),0);
+						print_pkg((MPS_Package*)Buffer);
+						fclose(archivo);
+						strcpy(llamada, "md5sum ");
+						strcat(llamada, nombre);
+						system(llamada);
+					}else{
+						printf("%s", mensaje->Payload);
 					}
-					//fprintf(archivo, "%c",'\0');
-					mensaje->PayloadDescriptor = '1';
-					strcpy(mensaje->Payload,"sys_close(");
-					strcat(mensaje->Payload,desc);
-					strcat(mensaje->Payload,")");
-					mensaje->PayloadLenght = strlen(mensaje->Payload);
-					send(s, (char*)mensaje,21+mensaje->PayloadLenght+1, 0);
-					recv(s, Buffer,sizeof(Buffer),0);
-					fclose(archivo);
-					strcpy(llamada, "md5sum ");
-					strcat(llamada, nombre);
-					system(llamada);
 				}
 				
 				

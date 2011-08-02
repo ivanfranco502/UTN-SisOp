@@ -31,6 +31,9 @@ void obtenerStructKSS(char *buffer, configKSS *configuracionInicial){
 	//puertoVDA
 	contadorBuffer = obtenerParametroParaStruct(buffer, variableParametro, contadorBuffer);
 	sscanf(variableParametro, "%d", &(configuracionInicial->puertoVDA));
+	//logActivada
+	contadorBuffer = obtenerParametroParaStruct(buffer, variableParametro, contadorBuffer);
+	sscanf(variableParametro, "%d", &(configuracionInicial->logActivado));
 }
 
 void getConfigKSS(configKSS *config){
