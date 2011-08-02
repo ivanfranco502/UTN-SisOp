@@ -10,11 +10,14 @@
 #include <sys/un.h>
 #include <time.h>
 #include "kss.h"
+#include "funcionesConfig.h"
+#include "funcionesLog.h"
 
 #define SOCK_PATH "echo_socket"
 
 int fss=0;
 int vda_montada=0;
+configKSS *configuracion;
 // PAyload descriptors: 0 shell   1 ftp        2 filesystem    3 vda
 //int parseo_parentesis (char *,char *,char *);
 
@@ -78,7 +81,10 @@ int main(void)
     extern int errno;
 	int largo;
 //	struct sockaddr socket_prueba;
-
+	
+	
+	char infoLog[200];
+	
 	int descriptor_un,descriptor_in,i,s, s2, t, len, retval;
 	int remote_client,remote_shell;
 	int contador_sockets;
@@ -115,6 +121,7 @@ int main(void)
 	Tdd = NULL;
 	fd_set *set_sockets=malloc(sizeof(fd_set));	//bolsa de descriptores
     
+	
 	struct sockaddr_in *local_in= malloc(sizeof (struct sockaddr_in));
     struct sockaddr_in *remote_in= malloc(sizeof (struct sockaddr_in));
 	struct sockaddr_un *local_un= malloc(sizeof (struct sockaddr_un));
@@ -130,13 +137,19 @@ int main(void)
 	p_aux = (nodo_lista_sockets*) malloc(sizeof(nodo_lista_sockets));
 
 */
+	configuracion =  (configKSS*) malloc(sizeof(configKSS));
+	getConfigKSS(configuracion);
+	sprintf(infoLog, "puerto FTPS: %u, puerto VDA y FSS: %u", configuracion->puertoFTPS, configuracion->puertoVDA);
+	printLog("MAIN","0",0,"INFO",infoLog,configuracion->logActivado);
+	
 	lista_sockets= NULL;
 
 
 
     local_in->sin_family = AF_INET;
     local_in->sin_addr.s_addr=INADDR_ANY;
-    local_in->sin_port = htons (5300);
+    local_in->sin_port = htons (configuracion->puertoFTPS);
+	
 
     local_un->sun_family = AF_UNIX;
     strcpy(local_un->sun_path, SOCK_PATH);
@@ -164,9 +177,11 @@ int main(void)
 	p_aux =generar_nodo_sockets();
 	lista_sockets = insertar_nodo_ordenado(lista_sockets, p_aux, descriptor_un);
 	printf("%d\n", lista_sockets->socket);
+	strcpy(lista_sockets->nombre, "\0");
 	p_aux =generar_nodo_sockets();
 	lista_sockets = insertar_nodo_ordenado(lista_sockets, p_aux, descriptor_in);
 	printf("%d\n", (lista_sockets->puntero_siguiente)->socket);
+	strcpy(lista_sockets->nombre, "\0");
 
 
 
@@ -259,9 +274,13 @@ int main(void)
 						fss=0;
 						Tdd = vaciarTdd(Tdd);
 					}
-					if(!strncmp(j->nombre, "VDA",3) && !strcmp(j->estado,"montado")){
-						vda_montada=0;
-						Tdd = eliminar_nodos_de_vda(j->nombre, Tdd, lista_sockets);
+					if(!strncmp(j->nombre, "VDA",3)){
+						sprintf(infoLog, "Se desconecto el VDA: %s", j->nombre);
+						printLog("MAIN","0",0,"INFO",infoLog,configuracion->logActivado);
+						if(!strcmp(j->estado,"montado")){
+							vda_montada=0;
+							Tdd = eliminar_nodos_de_vda(j->nombre, Tdd, lista_sockets);
+						}
 					}
 					if(!strcmp(j->nombre, "FTP")){
 						Tdd = eliminar_nodos_de_ftp(j->socket,Tdd, lista_sockets);
@@ -346,7 +365,7 @@ nodo_lista_sockets* atender_handshake(nodo_lista_sockets* nodo, nodo_lista_socke
 	MPS_Package* mensaje, *mensajeVDA;
 	nodo_lista_sockets* p_ant;
  	nodo_lista_sockets* p_sig;
-
+	char infoLog[200];
 
 	aux = lista_sockets;
 	aux2=lista_sockets;
@@ -431,6 +450,8 @@ nodo_lista_sockets* atender_handshake(nodo_lista_sockets* nodo, nodo_lista_socke
 			case '3':
 				strcpy(nodo->nombre, ((MPS_Package*)buff)->Payload);
 				strcpy(nodo->estado, "nomontado");
+				sprintf(infoLog, "Se conecto el VDA: %s", nodo->nombre);
+				printLog("MAIN","0",0,"INFO",infoLog,configuracion->logActivado);
 				break;
 		}
 	}
@@ -468,7 +489,7 @@ nodoTDD* atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* 
 			printf("posicion %d\n",pos);
 			
                         if (pos!=-1)
-                               Tdd = ( *(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID, Buffer->PayloadLenght);
+                               Tdd = ( *(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID, Buffer->PayloadLenght, configuracion->logActivado);
                                         //  llamada a syscall.. a ver casteo el punteor a void, busco el puntero de la syscall en posicion pos, y la llamo
                         else printf("comando invalido!!\n");
 
@@ -485,7 +506,7 @@ nodoTDD* atender_request(nodo_lista_sockets* nodo, MPS_Package* Buffer,nodoTDD* 
 			printf("la direccion es %0x  y debe ser %0x \n",vector_requests[pos].punt_request,&sys_open);
 
 			if (pos!=-1)
-				Tdd = (*(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID, Buffer->PayloadLenght);
+				Tdd = (*(vector_requests[pos].punt_request))(Tdd,lista_sockets,argumento,nodo->socket,Buffer->DescriptorID, Buffer->PayloadLenght,configuracion->logActivado);
 					//  llamada a syscall.. a ver casteo el punteor a void, busco el puntero de la syscall en posicion pos, y la llamo
 			else printf("syscall invalida!!\n");
 

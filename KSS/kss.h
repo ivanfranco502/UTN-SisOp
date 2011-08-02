@@ -43,20 +43,20 @@ int existe_archivo(nodoTDD*, unsigned int);
 
 typedef struct {
                 char nombre_request[10];
-                nodoTDD* (*punt_request)(nodoTDD*, nodo_lista_sockets*, char*, int, char*,int);
+                nodoTDD* (*punt_request)(nodoTDD*, nodo_lista_sockets*, char*, int, char*,int, int);
 }posible_request;
 
-nodoTDD* sys_open(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* sys_close(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* sys_read(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* sys_write(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* sys_list(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* sys_open(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
+nodoTDD* sys_close(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
+nodoTDD* sys_read(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
+nodoTDD* sys_write(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
+nodoTDD* sys_list(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
 
-nodoTDD* mount(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* umount(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* ls(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* format(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
-nodoTDD* tdd_dump(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int);
+nodoTDD* mount(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
+nodoTDD* umount(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
+nodoTDD* ls(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
+nodoTDD* format(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
+nodoTDD* tdd_dump(nodoTDD*, nodo_lista_sockets*, char*, int, char*, int, int);
 
 
 

@@ -1,6 +1,7 @@
 typedef struct  {
 	unsigned puertoFTPS;
 	unsigned puertoVDA;
+	int logActivado;
 }configKSS;
 
 void obtenerStructKSS(char *buffer, configKSS *configuracionInicial);
