@@ -21,28 +21,28 @@ int obtenerParametroParaStruct(char *buffer, char *variableParametro, int arranc
 	return(contadorBuffer);
 }
 
-void obtenerStructKSS(char *buffer, configKSS *configuracionInicial){
+void obtenerStructFSS(char *buffer, configFSS *configuracionInicial){
 	char variableParametro[100];
 	int contadorBuffer=0;
 
-	//puertoFTPS
+	//IPKSS
 	contadorBuffer = obtenerParametroParaStruct(buffer, variableParametro, contadorBuffer);
-	sscanf(variableParametro, "%d", &(configuracionInicial->puertoFTPS));
-	//puertoVDA
+	strcpy(configuracionInicial->ipKSS, variableParametro);
+	//puertoKSS
 	contadorBuffer = obtenerParametroParaStruct(buffer, variableParametro, contadorBuffer);
-	sscanf(variableParametro, "%d", &(configuracionInicial->puertoVDA));
+	sscanf(variableParametro, "%d", &(configuracionInicial->puertoKSS));
 	//logActivada
 	contadorBuffer = obtenerParametroParaStruct(buffer, variableParametro, contadorBuffer);
 	sscanf(variableParametro, "%d", &(configuracionInicial->logActivado));
 }
 
-void getConfigKSS(configKSS *config){
+void getConfigFSS(configFSS *config){
 	char *buffer;
 	long size;
 	FILE *archivo;
 
 	//apertura archivo
-	archivo =  fopen("kss.config", "r" );
+	archivo =  fopen("fss.config", "r" );
 
 	fseek (archivo , 0 , SEEK_END);
  	size = ftell (archivo);

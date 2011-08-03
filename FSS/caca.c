@@ -8,6 +8,8 @@
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "funcionesConfig.h"
+#include "funcionesLog.h"
 
 #define MAX_BLOQUES 100000
 #define SOCK_PATH "echo_socket"
@@ -43,7 +45,7 @@ void tamanioArchivo (char *, char *, char *);
 
 int main(){
 
-	char func[50],f[50],vda[5],nomArch[31],rta[100000],sectores[100000];
+	char func[50],f[50],vda[5],nomArch[31],rta[100000],sectores[100000], infoLog[200];
 	int t=0,x=0,z=0,i=0,tam=0,val2=0;
 	long val=0;
 	char stru[1032];
@@ -55,17 +57,27 @@ int main(){
 	struct sockaddr_in remote;
 
 	MPS_Package *mensaje;
+	configFSS *configuracion;
 
 	char mensaje_aux[20];
 	char stru_aux[1032];
 
 	char comando[10];
 	char argumento[100];
+	
 	mensaje = (MPS_Package*) malloc(sizeof(MPS_Package));
+	configuracion = (configFSS*) malloc(sizeof(configFSS));
+	
 	generar_DescriptorID(mensaje->DescriptorID);
 	mensaje->PayloadDescriptor='2';
 	mensaje->PayloadLenght=0;
 	strcpy(mensaje->Payload, "\0" );
+	
+	getConfigFSS(configuracion);
+	
+	sprintf(infoLog, "ipKSS: %s, puertoKSS: %u", configuracion->ipKSS, configuracion->puertoKSS);
+	printLog("MAIN","0",0,"INFO",infoLog,configuracion->logActivado);
+	
 
 // lo inicializo como para arrancar directo con el Handshake
 // NOTA:  para el handshake es CLAVE agregar el \0 para qe pise el mensaje anterior porque sino queda en buffer
@@ -74,12 +86,12 @@ int main(){
         	perror("socket");
     		exit(1);
 	}
-
+	
 	printf("Trying to connect...\n");
 
 	remote.sin_family = AF_INET;
-	remote.sin_addr.s_addr=inet_addr("192.168.1.106");
-	remote.sin_port = htons (5300);
+	remote.sin_addr.s_addr=inet_addr(configuracion->ipKSS);
+	remote.sin_port = htons (configuracion->puertoKSS);
 
 	len = sizeof(struct sockaddr);
 	if (connect(s, (struct sockaddr *)&remote, len) == -1) {
