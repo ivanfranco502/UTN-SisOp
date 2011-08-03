@@ -62,24 +62,11 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 
 	puerto = datos_cliente->puerto_datos;
 	
-	/*---------------------------------------------------------------*/
-	strcpy(mensajeLog, "IPThDatos:");
-	strcat(mensajeLog, datos_cliente->IP);
-	strcat(mensajeLog," PortThDatos:");
-	sprintf(auxLog,"%d",datos_cliente->puerto_datos);
-	strcat(mensajeLog, auxLog);
-	printLog("Thread Datos","2",datos_cliente->threadID, "INFO",mensajeLog);
-	/*---------------------------------------------------------------*/
-
 	do{
 		local_address->sin_port = htons (puerto);
 		descriptorD= socket(AF_INET, SOCK_STREAM, 0);
 		puerto++;
 	} while((bind (descriptorD,(struct sockaddr *) local_address, addrlen)) == SOCKET_ERROR); // intento bindear algun puerto
-
-	/*---------------------------------------------------------------*/
-	printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Bindeo exitoso");
-	/*---------------------------------------------------------------*/
 
 	datos_cliente->puerto_datos= puerto-1;
 
@@ -87,31 +74,15 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 
 	SetEvent(datos_cliente->evento1);
 
-	/*---------------------------------------------------------------*/
-	printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Empiezo a aceptar");
-	/*---------------------------------------------------------------*/
-
 	clienteDatos = accept(descriptorD, (struct sockaddr *)remote_address, (void*)&addrlen);
 	
-	/*---------------------------------------------------------------*/
-	strcpy(mensajeLog, "Nuevo Cliente Descriptor ");
-	sprintf(auxLog, "%d", clienteDatos);
-	strcat(mensajeLog,auxLog);
-	printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG",mensajeLog);
-	printLog("Thread Datos", "2",datos_cliente->threadID,"DEBUG","Acepte Cliente");
-	/*---------------------------------------------------------------*/
-
 	WaitForSingleObject(datos_cliente->evento2, INFINITE); // espero que el thread de comandos me diga que ya puedo mandar o recibir
 		
-	/*---------------------------------------------------------------*/
-	printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Comienzo analizar");
-	/*---------------------------------------------------------------*/
-
 	switch(datos_cliente->envio_o_recibo){
 		case 'E':
 
 			/*---------------------------------------------------------------*/
-			printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Voy a mandar");
+			printLog("Thread Datos","2",datos_cliente->threadID,"INFO","Envio de datos");
 			/*---------------------------------------------------------------*/
 
 			//send (clienteDatos, datos_cliente->buffer, strlen(datos_cliente->buffer), 0);	
@@ -129,23 +100,21 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 					resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
 				ReleaseMutex(datos_cliente->socketOcupado);
 				if(resultadoOperacion){
-					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+					printLog("Thread de Datos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
 				}else{
-					printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close Fallo");
+					printLog("Thread de Datos", "ERROR", datos_cliente->threadID, "4", "sys_close Fallo");
 				}
 			}else{
 				datos_cliente->thDatosOK = 0;
 			}
 
-			/*---------------------------------------------------------------*/
-			printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Mande");
-			/*---------------------------------------------------------------*/
-
 			break;
 		case 'R':
-			/*---------------------------------------------------------------*/
-			printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Voy a Recibir");
-			/*---------------------------------------------------------------*/
+				
+				/*---------------------------------------------------------------*/
+				printLog("Thread Datos","2",datos_cliente->threadID,"INFO","Recepcion de datos");
+				/*---------------------------------------------------------------*/
+
 	
 //			send(datos_cliente->socket_comando, "150 Opening BINARY mode" , strlen("150 Opening BINARY mode"),0);
 			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
@@ -161,21 +130,19 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 				resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
 			ReleaseMutex(datos_cliente->socketOcupado);
 			if(resultadoOperacion){
-				printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+				printLog("Thread de Datos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
 			}else{
-				printLog("Thread de Comandos", "INFO", datos_cliente->threadID, "4", "sys_close Fallo");
+				printLog("Thread de Datos", "ERROR", datos_cliente->threadID, "4", "sys_close Fallo");
 			}
-
-			/*---------------------------------------------------------------*/
-			printLog("Thread Datos", "2", datos_cliente->threadID,"DEBUG","Paso el Recv");
-			/*---------------------------------------------------------------*/
 
 			break;
 
 		case 'L':
+
 			/*---------------------------------------------------------------*/
-			printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Voy a mandar");
+			printLog("Thread Datos","2",datos_cliente->threadID,"INFO","Envio de datos");
 			/*---------------------------------------------------------------*/
+
 			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
 				strcpy(message, enviarSyscallList(datos_cliente->ftp_path, datos_cliente->socketKSS));
 			ReleaseMutex(datos_cliente->socketOcupado);
@@ -183,9 +150,6 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 
 			send (clienteDatos, datos_cliente->buffer, strlen(datos_cliente->buffer), 0);
 
-			/*---------------------------------------------------------------*/
-			printLog("Thread Datos","2",datos_cliente->threadID,"DEBUG","Mande");
-			/*---------------------------------------------------------------*/
 			break;
 		default:
 			;//hacer nada
@@ -210,10 +174,6 @@ int rta_PASV (char *Response, char *arg,reg_cliente *datos_cliente){
 	strcat(Response, obtenerParametrosParaPASV(datos_cliente->IP, datos_cliente->puerto_datos));
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
-
-	/*---------------------------------------------------------------*/
-	printLog("Handler Command","5",datos_cliente->threadID,"DEBUG",Response);
-	/*---------------------------------------------------------------*/
 
 	return 0;
 }
@@ -265,10 +225,6 @@ int rta_TYPE (char *Response,char *arg,reg_cliente *datos_cliente){
 	}
 	strcat(Response, "\r\n");
 	send(datos_cliente->socket_comando, Response , strlen("200 Type set to A\r\n"),0);
-	
-	/*---------------------------------------------------------------*/
-	printLog("Handler Command","5",datos_cliente->threadID,"DEBUG",Response);
-	/*---------------------------------------------------------------*/
 
 	return 0;
 }
@@ -283,10 +239,6 @@ int rta_LIST (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcat(Response, " mode data connection for file list");
 	strcat(Response, "\r\n");
 	
-	/*---------------------------------------------------------------*/
-	printLog("Handler Command","5",datos_cliente->threadID,"DEBUG",Response);
-	/*---------------------------------------------------------------*/
-
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
 	WaitForSingleObject(datos_cliente->hThreadDatos, INFINITE); // espero que termine el thread de datos
@@ -361,10 +313,6 @@ int rta_RETR (char *Response,char *arg,reg_cliente *datos_cliente){
 	strcat(Response,"\r\n");
 	send(datos_cliente->socket_comando, Response, strlen(Response),0);
 	
-	/*---------------------------------------------------------------*/
-	printLog("Handler Command","5",datos_cliente->threadID,"DEBUG",Response);
-	/*---------------------------------------------------------------*/
-
 	return 0;
 }
 
@@ -389,16 +337,9 @@ int rta_STOR (char *Response, char *arg, reg_cliente *datos_cliente){
 		strcpy(datos_cliente->ftp_path, argumentoCompleto);
 		SetEvent(datos_cliente->evento2);     // le aviso al thread de datos que tiene que mandar o recibir
 	 
-		/*---------------------------------------------------------------*/
-		printLog("Handler Command","5",datos_cliente->threadID,"DEBUG","Esperando que me envien datos");
-		/*---------------------------------------------------------------*/
-
 		send(datos_cliente->socket_comando, Response, strlen(Response),0);
 		WaitForSingleObject(datos_cliente->hThreadDatos, INFINITE); // espero que termine el thread de datos
 
-		/*---------------------------------------------------------------*/
-		printLog("Handler Command","5",datos_cliente->threadID,"DEBUG","Volvi del ThDatos STOR");
-		/*---------------------------------------------------------------*/
 		strcpy(datos_cliente->ftp_path, auxiliarPath);
 
 		if(datos_cliente->thDatosOK){
