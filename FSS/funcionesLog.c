@@ -4,7 +4,7 @@
 #include <time.h>
 #include "funcionesLog.h"
 
-int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *tipoLog, char *dato){
+int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *tipoLog, char *dato, int logActivada){
 	int bytesTransferidos,
 		n;
 	char log[500],
@@ -13,33 +13,35 @@ int printLog (char *nombreProceso, char *pIDProceso, unsigned threadID, char *ti
 	FILE *archivo;
 	time_t  st;
 	struct tm *tmPtr;
+	if (logActivada){
+		archivo = fopen("ntvc.log","a");
+		st = time(NULL);
+		tmPtr = localtime(&st);
+		
+		strftime(fecha, 13, "%H:%M:%S", tmPtr);
 
-	archivo = fopen("ntvc.log","a");
-	st = time(NULL);
-	tmPtr = localtime(&st);
-	
-	strftime(fecha, 13, "%H:%M:%S", tmPtr);
+		sprintf(tID, "%d", threadID);
 
-	sprintf(tID, "%d", threadID);
+		bytesTransferidos = 0;
+		
+		
+		strcpy(log, "[");
+		strcat(log, fecha);
+		strcat(log, "][");
+		strcat(log, nombreProceso);
+		strcat(log, "][");
+		strcat(log, pIDProceso);
+		strcat(log, "][");
+		strcat(log, tID);
+		strcat(log, "][");
+		strcat(log, tipoLog);
+		strcat(log, "][");
+		strcat(log, dato);
+		strcat(log, "]\n\0");
+		
+		fwrite(log,1, strlen(log), archivo);
 
-	bytesTransferidos = 0;
-
-	strcpy(log, "[");
-	strcat(log, fecha);
-	strcat(log, "][");
-	strcat(log, nombreProceso);
-	strcat(log, "][");
-	strcat(log, pIDProceso);
-	strcat(log, "][");
-	strcat(log, tID);
-	strcat(log, "][");
-	strcat(log, tipoLog);
-	strcat(log, "][");
-	strcat(log, dato);
-	strcat(log, "]\n\0");
-	
-	fwrite(log,1, sizeof(log), archivo);
-
-	fclose(archivo);
+		fclose(archivo);
+	}
 	return 0;
 }
