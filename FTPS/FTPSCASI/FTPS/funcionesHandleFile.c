@@ -108,8 +108,7 @@ char *pasarListaArchivosARespuestaFTP(char *buffer){
 	int argumentosPasados = 1,
 		contadorBuffer = 0,
 		contadorArgumento = 0,
-		yaCargueArchivo = 0,
-		AuxiliarSize = 0;
+		yaCargueArchivo = 0;
 	char mensaje[1024],
 		 argumento[50],
 		 nombreArchivo[50],
@@ -133,10 +132,10 @@ char *pasarListaArchivosARespuestaFTP(char *buffer){
 			yaCargueArchivo = 0;
 			argumento[contadorArgumento] = '\0';
 			contadorArgumento = 0;
-			sscanf(argumento,"%d", &AuxiliarSize);
-			if(AuxiliarSize){						//es archivo
+			if(strcmp(argumento, "$")!= 0){						//es archivo
 				strcpy(lineaArchivo, "-rwxrwxrwx 1 ftp ftp ");
 			}else{									//es directorio
+				strcpy(argumento, "0");
 				strcpy(lineaArchivo, "drwxrwxrwx 1 ftp ftp ");
 			}
 				strcat(lineaArchivo, argumento);

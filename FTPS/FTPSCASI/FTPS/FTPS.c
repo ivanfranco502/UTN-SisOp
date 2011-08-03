@@ -77,13 +77,6 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 	strcpy(comando, obtenerComando(buffer));
 	strcpy(argumento, obtenerParametro(buffer));
 
-	/*-----------------------------COMANDO Y ARGUMENTO----------------------------------*/
-	strcpy(mensajeLog, comando);
-	strcat(mensajeLog, " ");
-	strcat(mensajeLog, argumento);
-	printLog("Thread Comandos","1",datos_cliente->threadID,"DEBUG",mensajeLog);
-	/*-----------------------------------FIN----------------------------*/
-	
 	while( corrector != SOCKET_ERROR ){  // espero que cierre sesion
 		command_handler(vector_comandos, comando, argumento, datos_cliente);
 		corrector=recv(datos_cliente->socket_comando,buffer,SOCKET_MAX_BUFFER,0);
@@ -91,12 +84,6 @@ unsigned __stdcall threadClienteNuevo( void* pArguments ){
 		strcpy(comando, obtenerComando(buffer));
 		strcpy(argumento, obtenerParametro(buffer));
 
-/*		-----------------------------COMANDO Y ARGUMENTO----------------------------------*/
-		strcpy(mensajeLog, comando);
-		strcat(mensajeLog, " ");
-		strcat(mensajeLog, argumento);
-		printLog("Thread Comandos","1",datos_cliente->threadID,"DEBUG",mensajeLog);
-/*		-----------------------------------FIN----------------------------*/
 	}
 	/*----------------------------------DESCONEXION Th Comandos-----------------------------*/
 	printLog("Thread Comandos","1",datos_cliente->threadID,"INFO","Desconexion al Thread de Comandos");
@@ -142,7 +129,12 @@ int main(){
 	argumentos->socketOcupado = CreateMutex(NULL, FALSE, NULL);
 
 	/*-----------------------------------Log Config----------------------------------------*/
-	strcpy(mensajeLog, "IPKernel:");
+	strcpy(mensajeLog, "IPFTPS:");
+	strcat(mensajeLog, argumentos->config->IPServer);
+	strcat(mensajeLog," PortFTPS:");
+	sprintf(auxLog, "%d", argumentos->config->puertoServer);
+	strcat(mensajeLog, auxLog);
+	strcat(mensajeLog, " IPKernel:");
 	strcat(mensajeLog, argumentos->config->IPKernel);
 	strcat(mensajeLog," PortKernel:");
 	sprintf(auxLog, "%d", argumentos->config->puertoKernel);
@@ -170,19 +162,9 @@ int main(){
 		local_address->sin_port = htons (21);
 		
 		descriptor= socket(AF_INET, SOCK_STREAM, 0);
-		/*-----------------------------IMPRIME Descriptor Socket---------------------*/
-		strcpy(mensajeLog, "Descriptor Socket: ");
-		sprintf(auxLog,"%d",descriptor);
-		strcat(mensajeLog, auxLog);
-		printLog("Main FTP","0",0,"DEBUG",mensajeLog);
-		/*-------------------------------FIN--------------------------------*/
-		
+
 		bind (descriptor,(struct sockaddr *) local_address, addrlen);
 		listen(descriptor,100);
-		
-		/*-----------------------------LISTEN PORT----------------------------------*/
-		printLog("Main FTP","0",0,"DEBUG","Escuchando puerto");
-		/*---------------------------------FIN------------------------------*/
 		
 		inicializarVectorDeThreads();
 		
@@ -191,18 +173,21 @@ int main(){
 				argumentos->socketAux = socketAux;
 				hThread[socketAux] = (HANDLE) _beginthreadex(NULL,0, &threadClienteNuevo, (void*) &(*argumentos), 0, &threadID[socketAux]);
 				//printf("%d", *socketAux);
-				/*----------------------------CONEXION NUEVO CLLIENTE-----------------------------------*/
+				/*----------------------------CONEXION NUEVO CLIENTE-----------------------------------*/
 				strcpy(mensajeLog, "Conexion Nuevo cliente al puerto ftp: ");
 				sprintf(auxLog,"%d", socketAux);
 				strcat(mensajeLog,auxLog);
-				printLog("Main FTP","0",0,"DEBUG",mensajeLog);
+				printLog("Main FTP","0",0,"INFO",mensajeLog);
 				/*---------------------------------------------------------------*/
 			}
 
 			for (i=0; i<CANTIDAD_CLIENTES;i++){
 				if (threadsFinalizados[i]){
 					/*---------------------------------DESCONEXION CLIENTE------------------------------*/
-					printLog("Disconnect client","0",threadID[i], "INFO", "Desconexion cliente al puerto ftp");
+					strcpy(mensajeLog, "Desconexion cliente al puerto ftp: ");
+					sprintf(auxLog, "%d", i);
+					strcat(mensajeLog, auxLog);
+					printLog("Disconnect client","0",threadID[i], "INFO", mensajeLog);
 					/*-----------------------------FIN DESCONEXION CLIENTE----------------------------------*/
 					closesocket(i);
 					CloseHandle(hThread[i]);
