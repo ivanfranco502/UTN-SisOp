@@ -1,5 +1,5 @@
 typedef struct  {
-	char IPKSS[16];
+	char ipKSS[16];
 	unsigned puertoKSS;
 	int logActivado;
 }configFSS;
