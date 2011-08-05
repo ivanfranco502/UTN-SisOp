@@ -13,7 +13,6 @@
 #include "funcionesConfig.h"
 #include "funcionesLog.h"
 
-int cache[10]={0,0,0,0,0,0,0,0,0,0};
 
 
 Nodo* InsertarNodo(Nodo *lista,Nodo *nodito)
@@ -35,52 +34,60 @@ Nodo* InsertarNodo(Nodo *lista,Nodo *nodito)
 	return(lista);
 }
 int buscarCache (Nodo *ptr){
-int x=0,num=0,i=0;
+int num=0;
+unsigned long i=0,x=0,max=0;
 	while(x!=10){
-		if(cache[x]==ptr->dirLogica){
+		if(cache[x].dirLog==ptr->dirLogica){
 			num=1;
 			x=9;
+			cache[x].count=0;
+		}
+		if(cache[x].dirLog!=-1){
+			cache[x].count++;
 		}
 		x++;
 	}
+	x=0;
 	if(num!=1){
-		while(cache[i]!=0){
-			i++;
-		}
-		if(cache[i]==0){
-			cache[i]=ptr->dirLogica;
-			}else{
-				x=9;
-				while(cache[x]!=0){
-					cache[x]=cache[x-1];
-					x--;
-				}
-				cache[0]=ptr->dirLogica;
+		if(cache[9].dirLog==-1){
+			while(cache[i].dirLog!=-1){
+				i++;
 			}
+			cache[i].dirLog=ptr->dirLogica;
+		}else{
+			max=cache[0].count;
+			while(x<10){
+				if(cache[x].count>max){
+					max=cache[x].count;
+					i=x;
+				}
+				x++;
+			}
+			cache[i].dirLog=ptr->dirLogica;
+			cache[i].count=0;
+		}
 	}
 return(num);
 }
 int buscarSector(long cabezal, long dirLogica){
 	int	num=0;
+	struct chs dir,cab;
+	cab=takeCHS(cabezal);
+	dir=takeCHS(dirLogica);
 	if(cabezal==dirLogica){
 			printf("%d ",dirLogica);
 			num=0;
 	}else{
-		if(cabezal>dirLogica){
+			printf("%d ",cabezal);
 			while(cabezal!=dirLogica){
-					printf("%d ",cabezal);
-					cabezal--;
+					cabezal++;
 					num++;
+					if(cabezal>((dir.pista+1)*4)-1){
+						cabezal=dir.pista*4;
+					}
+					printf("%d ",cabezal);
 			}
-			printf("%d ",cabezal);
-		}else{
-			while(cabezal!=dirLogica){
-				printf("%d ",cabezal);
-				cabezal++;
-				num++;
-			}
-			printf("%d ",cabezal);
-		}
+		
 	}
 	return num;
 }
@@ -119,16 +126,17 @@ int sectLeidos(long dirLogica){
 	return num;
 }
 
-Nodo* mostrarLista(Nodo *lista) 
+Nodo* mostrarLista(Nodo *lista,HANDLE heap ) 
 {
 Nodo *ptr,*ptr2,*cabezal;
-int sumaTiempos=0,dir,opcion,esta,num;
+int sumaTiempos=0,dir,opcion,esta,num,contador=0;
 struct chs CHS;char mensajeLog[100],auxLog[50];
 char datos[512];
+configVDA *auxiliar;
 //HANDLE heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
 ptr=lista;
-//cabezal=(Nodo *)HeapAlloc(heap,HEAP_NO_SERIALIZE, sizeof(Nodo));
-cabezal=(Nodo *)malloc(sizeof(Nodo));
+cabezal=(Nodo *)HeapAlloc(heap,HEAP_NO_SERIALIZE, sizeof(Nodo));
+//cabezal=(Nodo *)malloc(sizeof(Nodo));
 dir=leerCabezal();
 cabezal->dirLogica=dir;
 CHS=takeCHS(dir);
@@ -136,37 +144,71 @@ cabezal->pista=CHS.pista;
 cabezal->proximo=NULL; 
 cabezal->tiempo=0;
 
+auxiliar = HeapAlloc(heap, HEAP_NO_SERIALIZE, sizeof(configVDA));
+getConfigVDA(auxiliar);
+
 printf("\nPosicion:%d\n",dir);
 
 while (lista!=NULL){
 		ptr=lista;
 		ptr=algoritmo(ptr,cabezal);
-		esta=buscarCache(ptr);
 
 		strcpy(mensajeLog, "Posicion Cabezal: ");
 		sprintf(auxLog,"%d",dir);
 		strcat(mensajeLog, auxLog);
-		printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
+		printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
+		switch (ptr->accion){
+		case 1:
+			cabezal->dirLogica=ptr->dirLogica;
+			cabezal->pista=ptr->pista;
+			dir=leerCabezal();
+			CHS=takeCHS(dir);
+			num=sectLeidos(ptr->dirLogica);
+			sumaTiempos=sumaTiempos+abs(ptr->pista-CHS.pista)+num;
+			CHS=takeCHS(ptr->dirLogica);
+			
+			
+			printf("\nTiempo consumido:%d ms",sumaTiempos);
+			leer(ptr->dirLogica,datos);
+			if((cabezal->dirLogica+1)>((ptr->pista+1)*4)-1){
+					cabezal->dirLogica=ptr->pista*4;
+					grabarCabezal(cabezal->dirLogica);
+			}else{
+					grabarCabezal(ptr->dirLogica+1);
+			}
+			printf("\nPosicion Cabezal:%d\n",cabezal->dirLogica);
+			strcpy(mensajeLog, "Sector Escrito: ");
+			sprintf(auxLog,"%d",ptr->dirLogica);
+			strcat(mensajeLog, auxLog);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
 
+			strcpy(mensajeLog, "Tiempo Cosumido: ");
+			sprintf(auxLog,"%d",sumaTiempos);
+			strcat(mensajeLog, auxLog);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
+			contador++;
+		break;
+		case 2:
+		esta=buscarCache(ptr);
 		if (esta==1){
 					CHS=takeCHS(ptr->dirLogica);
-					printf("\nSectores Leidos:%d - cache",CHS.sector);
+					printf("\nSectores Leidos:%d - cache",ptr->dirLogica);
 					
 					strcpy(mensajeLog, "Sectores Leidos: ");
 					sprintf(auxLog,"%d",CHS.sector);
 					strcat(mensajeLog, auxLog);
-					printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
+					printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
 					
 					printf("\nTiempo consumido:%d ns",1);
 
 					strcpy(mensajeLog, "Tiempo consumido: ");
 					strcat(mensajeLog,"1 ns");
-					printLog("Thread VDA","0",0,"DEBUG",mensajeLog);	
+					printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);	
 
-					strcpy(datos,leer(ptr->dirLogica));
+					leer(ptr->dirLogica,datos);
 					strcat(datos,"\0");
-					printf("\n%s\n",datos);
-					printLog("Thread VDA","0",0,"DEBUG","Cache:1 ns");
+					printf("\nDatos:%s\n",datos);
+					printLog("Thread VDA","0",0,"DEBUG","Cache:1 ns",1);
 		}else{
 			cabezal->dirLogica=ptr->dirLogica;
 			cabezal->pista=ptr->pista;
@@ -178,19 +220,27 @@ while (lista!=NULL){
 			
 			
 			printf("\nTiempo consumido:%d ms",sumaTiempos);
-			printf("\nSector %d (%d,%d,%d): %s\n",ptr->dirLogica,CHS.cabezal,CHS.pista,CHS.sector,leer(ptr->dirLogica));
-			grabarCabezal(ptr->dirLogica+1);
-	
+			leer(ptr->dirLogica,datos);
+			printf("\nSector %d (%d,%d,%d): %s\n",ptr->dirLogica,CHS.cabezal,CHS.pista,CHS.sector,datos);
+			if((cabezal->dirLogica+1)>((ptr->pista+1)*4)-1){
+					cabezal->dirLogica=ptr->pista*4;
+					grabarCabezal(cabezal->dirLogica);
+			}else{
+					grabarCabezal(ptr->dirLogica+1);
+			}
 			strcpy(mensajeLog, "Sectores Leidos: ");
 			sprintf(auxLog,"%d",ptr->dirLogica);
 			strcat(mensajeLog, auxLog);
-			printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
 
 			strcpy(mensajeLog, "Tiempo Cosumido: ");
 			sprintf(auxLog,"%d",sumaTiempos);
 			strcat(mensajeLog, auxLog);
-			printLog("Thread VDA","0",0,"DEBUG",mensajeLog);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
 		
+			contador++;
+		}
+		break;
 		}
 			ptr2=lista;
 			while ((ptr2->proximo!=ptr) && (ptr!=lista)){
@@ -199,18 +249,22 @@ while (lista!=NULL){
 			ptr2->proximo=ptr->proximo;
 			if(ptr==lista){
 				lista=lista->proximo;
-				//HeapFree( heap,0,ptr);
-				free(ptr);
+				HeapFree( heap,0,ptr);
+				//free(ptr);
 				ptr=lista;
 			}else{
-				//HeapFree( heap,0,ptr);
-				free(ptr);
+				HeapFree( heap,0,ptr);
+				//free(ptr);
 				ptr=ptr2;
 			}
+			
 }
-	//HeapFree( heap,0, cabezal );
-	free(cabezal);
+	HeapFree( heap,0, cabezal );
+	printf("Tiempo medio:%.2f \n",((float)sumaTiempos/(float)contador));
+	printf("Peor tiempo:%d \n",sumaTiempos);
+	//free(cabezal);
 }
+
 
 Nodo* algoritmo(Nodo *ptr,Nodo* cabezal)
 {
@@ -261,27 +315,28 @@ if (!(ret = db_create(&dbp, NULL, 0))){
 
 //Grabar la base
 
-void grabar(long clave,void *dato){
+void grabar(long clave,char *dato){
 DB *dbp; 
-int ret;           
+int ret;char datos[512];           
 DBT key, data;  
 memset(&key, 0, sizeof(DBT)); 
 memset(&data, 0, sizeof(DBT)); 
 	
-	crearBase();
+
 	ret = db_create(&dbp, NULL, 0);    
                        
 	ret = dbp->open(dbp, NULL, vda , NULL, DB_BTREE, 0, 0);		
-	
+	memcpy(datos,dato,512);
 	key.data = &clave;
 	key.size = sizeof(long);
-	data.data = dato;
+	data.data = datos;
 	data.size = 512; 
-
-	ret = dbp->put(dbp, NULL, &key, &data, 0);
 	
+		ret = dbp->put(dbp, NULL, &key, &data, 0);
+		
 	if (ret == DB_KEYEXIST) {
 			dbp->err(dbp, ret, "La clave %d ya existe!\n", clave);
+			strcpy(dato,"\0");
 		}
 dbp->close(dbp, 0); 
 }
@@ -294,7 +349,7 @@ DBT key, data;
 memset(&key, 0, sizeof(DBT)); 
 memset(&data, 0, sizeof(DBT));
 
-crearBase();
+
 ret = db_create(&dbp, NULL, 0);
 
 ret=dbp->open(dbp, NULL, vda, NULL, DB_BTREE, 0, 0);
@@ -317,7 +372,7 @@ DBT key, data; 	struct chs CHS;
 memset(&key, 0, sizeof(DBT)); 
 memset(&data, 0, sizeof(DBT)); 
 	
-	crearBase();
+	
 	ret = db_create(&dbp, NULL, 0);    
                        
 	ret = dbp->open(dbp, NULL, vda, NULL, DB_BTREE, 0, 0);		
@@ -336,20 +391,18 @@ memset(&data, 0, sizeof(DBT));
 		dirLogica=0;
 	}
 	
-	return(dirLogica);
-	
 	dbp->close(dbp, 0); 
-
+	return(dirLogica);
 }	
 
 //Leo Datos
 
-char* leer(long clave){	
+void leer(long clave, char *datos){	
 DB *dbp;int ret;           
-DBT key, data; char datos[512]; 	
+DBT key, data; 	
 memset(&key, 0, sizeof(DBT)); 
 memset(&data, 0, sizeof(DBT)); 
-	crearBase();
+	
 	ret = db_create(&dbp, NULL, 0);    
                        
 	ret = dbp->open(dbp, NULL, vda, NULL, DB_BTREE, 0, 0);
@@ -369,7 +422,6 @@ memset(&data, 0, sizeof(DBT));
 	}else{
 		memcpy(datos,data.data,512);
 	}
-	return(datos);
 	dbp->close(dbp, 0); 
 }
 
@@ -381,7 +433,7 @@ int ret;
 DBT key, data; 	
 memset(&key, 0, sizeof(DBT)); 
 memset(&data, 0, sizeof(DBT)); 
-	crearBase();
+	
 	ret = db_create(&dbp, NULL, 0);    
                        
 	ret = dbp->open(dbp, NULL, vda, NULL, DB_BTREE, 0, 0);
@@ -407,7 +459,7 @@ struct chs getCHS(void){
 	configVDA *auxiliar;
 
 	auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configVDA));
-
+	
 
 	getConfigVDA(auxiliar);
 
@@ -421,56 +473,61 @@ void posCabezal(void){
 	long dir; struct chs CHS;
 	dir=leerCabezal();
 	CHS=takeCHS(dir);
-	printf("CHS:(1,%d,%d)\n",CHS.pista,CHS.sector);
+	printf("CHS:(%d,1,%d)\n",CHS.pista,CHS.sector);
 }
-Nodo* generarNodo(dir1){
+Nodo* generarNodo(long dir1,HANDLE heap ){
 Nodo *nodo1;struct chs posDato;
 //HANDLE heap = HeapCreate( 0, 0, 0 );
+	//heap = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
 	posDato=takeCHS(dir1);
-	//nodo1=(Nodo *)HeapAlloc(GetProcessHeap(),HEAP_NO_SERIALIZE, sizeof(Nodo));
-	nodo1=(Nodo *)malloc(sizeof(Nodo));
+	nodo1=(Nodo *)HeapAlloc(heap,HEAP_NO_SERIALIZE, sizeof(Nodo));
+	//nodo1=(Nodo *)malloc(sizeof(Nodo));
 	nodo1->dirLogica=dir1;
 	nodo1->pista=posDato.pista;
 	nodo1->tiempo=0; 
 	nodo1->proximo=NULL;
 return(nodo1);
 }
-char* getSectores(long dir1,long dir2){
+void getSectores(long dir1,long dir2,char *mensaje,HANDLE heap ){
 
 Nodo *nodo,*nodo1=NULL,*nodo2=NULL, *lista=NULL;
-struct buffer info;char	mensaje[1024];			
+struct buffer info;			
 	
-	nodo1=generarNodo(dir1);
+	nodo1=generarNodo(dir1,heap );
 	nodo1->accion=2;
-	nodo2=generarNodo(dir2);
+	nodo2=generarNodo(dir2,heap );
 	nodo2->accion=2;
 	lista=InsertarNodo(lista,nodo1);
 	lista=InsertarNodo(lista,nodo2);
 	nodo=nodo1;
-	memcpy(info.dato1,leer(dir1),512);
-	memcpy(info.dato2,leer(dir2),512);
-	while(nodo!=NULL){
-		nodo=mostrarLista(lista);	
-	}
+	leer(dir1,info.dato1);
+	leer(dir2,info.dato2);
+	
+	mostrarLista(lista,heap );	
+	
 	memcpy(mensaje,info.dato1,512);
 	memcpy(mensaje+512,info.dato2,512);
-	return(mensaje);
 }
 
-int putSectores(struct infoGrabar *datos){
+int putSectores(struct infoGrabar *datos,HANDLE heap ){
 
 Nodo *nodo1=NULL,*nodo2=NULL,*lista=NULL,*nodo;
 
 int num=0;
-	nodo1=generarNodo(datos->dir1);
+	nodo1=generarNodo(datos->dir1,heap );
 	nodo1->dato=datos->dato1;
-	nodo2=generarNodo(datos->dir2);
+	nodo1->accion=1;
+	nodo2=generarNodo(datos->dir2, heap );
 	nodo2->dato=datos->dato2;
+	nodo2->accion=1;
+	num=sizeof(datos->dato1)+sizeof(datos->dato2);
 	lista=InsertarNodo(lista,nodo1);
 	lista=InsertarNodo(lista,nodo2);
 	grabar(datos->dir1,datos->dato1);
 	grabar(datos->dir2,datos->dato2);
-	mostrarLista(lista);	
-//	free(nodo1);free(nodo2);
+	mostrarLista(lista,heap );	
+	if(!strcmp(datos->dato1,"\0") || !strcmp(datos->dato2,"\0")){
+		num=0;
+	}
 return(num);
 }

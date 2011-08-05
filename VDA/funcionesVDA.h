@@ -1,22 +1,23 @@
+#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop) )
 struct buffer
 {
 char dato1[512];
 char dato2[512];
 	
 };
-struct info
+struct caches
 {
-long dirLogica;
-void *dato;
+long dirLog;
+long count;
 	
 };
-struct infoGrabar
+PACK(struct infoGrabar
 {
-long dir1;
-char dato1[512];
-long dir2;
-char dato2[512];	
-};
+	long dir1;
+	char dato1[512];
+	long dir2;
+	char dato2[512];	
+});
 struct chs
 {
 int pista;
@@ -36,10 +37,12 @@ typedef struct nodo
 }Nodo;
 
 char vda[8];
+struct caches cache[10];
+
 
 int buscarSector(long, long );
-int putSectores(struct infoGrabar *);
-char* getSectores(long,long);
+int putSectores(struct infoGrabar *,HANDLE);
+void getSectores(long,long,char *,HANDLE);
 void crearBase(void);
 void grabarCabezal(long);
 long leerCabezal(void);
@@ -48,10 +51,11 @@ void consola(void);
 struct chs takeCHS(long);
 Nodo* atenderSector(int);
 void borrar(long);
-char* leer(long);
+void leer(long,char *);
 void grabar(long ,void *);
 Nodo* InsertarNodo(Nodo *,Nodo *);
-Nodo* mostrarLista(Nodo *);
+Nodo* mostrarLista(Nodo *,HANDLE);
 Nodo* algoritmo(Nodo *,Nodo *);
 int sectLeidos(long);
 struct chs getCHS(void);
+Nodo* generarNodo(long,HANDLE);

@@ -177,11 +177,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\SO\VDA\funcionesConfig.c"
+				RelativePath=".\funcionesConfig.c"
 				>
 			</File>
 			<File
-				RelativePath="..\..\SO\VDA\funcionesLog.c"
+				RelativePath=".\funcionesLog.c"
 				>
 			</File>
 			<File
@@ -203,11 +203,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\..\SO\VDA\funcionesConfig.h"
+				RelativePath=".\funcionesConfig.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\SO\VDA\funcionesLog.h"
+				RelativePath=".\funcionesLog.h"
 				>
 			</File>
 			<File
