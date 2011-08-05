@@ -1,3 +1,3 @@
 make all:
-	gcc -ggdb FSS.c -o FSS
+	gcc -ggdb caca.c funcionesConfig.c funcionesLog.c -o FSS
 

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "funcionesConfig.h"
 
 int obtenerParametroParaStruct(char *buffer, char *variableParametro, int arrancaContadorBuffer){
@@ -55,6 +56,6 @@ void getConfigFSS(configFSS *config){
 
 	fclose(archivo);
 
-	obtenerStructKSS(buffer, config);//funcion que se le pasa el buffer y el structFTP
+	obtenerStructFSS(buffer, config);//funcion que se le pasa el buffer y el structFTP
 	free(buffer);
 }

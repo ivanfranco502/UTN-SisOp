@@ -42,7 +42,6 @@ void listarDirectorio(char *, char *);
 void tamanioArchivo (char *, char *, char *);
 
 
-
 int main(){
 
 	char func[50],f[50],vda[5],nomArch[31],rta[100000],sectores[100000], infoLog[200];
@@ -58,6 +57,7 @@ int main(){
 
 	MPS_Package *mensaje;
 	configFSS *configuracion;
+
 
 	char mensaje_aux[20];
 	char stru_aux[1032];
