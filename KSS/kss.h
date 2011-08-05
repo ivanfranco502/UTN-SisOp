@@ -74,7 +74,7 @@ nodo_lista_sockets* generar_nodo_sockets();
 void sockets_activos(nodo_lista_sockets *);
 nodo_lista_sockets*  eliminar_nodo(nodo_lista_sockets*, nodo_lista_sockets*, nodo_lista_sockets*,int);
 Sector* generar_insertar_sector(Sector*, unsigned int);
-
+int esta_montado(char*, nodo_lista_sockets*);
 
 int buscar_request(char *,posible_request*);
 int parseo_parentesis (char *,char *,char *, int);
