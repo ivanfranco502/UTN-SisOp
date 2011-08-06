@@ -126,7 +126,7 @@ int sectLeidos(long dirLogica){
 	return num;
 }
 
-Nodo* mostrarLista(Nodo *lista,HANDLE heap ) 
+Nodo* mostrarLista(Nodo *lista,HANDLE heap, int logActivada) 
 {
 Nodo *ptr,*ptr2,*cabezal;
 int sumaTiempos=0,dir,opcion,esta,num,contador=0;
@@ -156,7 +156,7 @@ while (lista!=NULL){
 		strcpy(mensajeLog, "Posicion Cabezal: ");
 		sprintf(auxLog,"%d",dir);
 		strcat(mensajeLog, auxLog);
-		printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
+		printLog("Thread VDA","0",0,"DEBUG",mensajeLog,logActivada);
 		switch (ptr->accion){
 		case 1:
 			cabezal->dirLogica=ptr->dirLogica;
@@ -180,12 +180,12 @@ while (lista!=NULL){
 			strcpy(mensajeLog, "Sector Escrito: ");
 			sprintf(auxLog,"%d",ptr->dirLogica);
 			strcat(mensajeLog, auxLog);
-			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,logActivada);
 
 			strcpy(mensajeLog, "Tiempo Cosumido: ");
 			sprintf(auxLog,"%d",sumaTiempos);
 			strcat(mensajeLog, auxLog);
-			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,logActivada);
 			contador++;
 		break;
 		case 2:
@@ -197,18 +197,18 @@ while (lista!=NULL){
 					strcpy(mensajeLog, "Sectores Leidos: ");
 					sprintf(auxLog,"%d",CHS.sector);
 					strcat(mensajeLog, auxLog);
-					printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
+					printLog("Thread VDA","0",0,"DEBUG",mensajeLog,logActivada);
 					
 					printf("\nTiempo consumido:%d ns",1);
 
 					strcpy(mensajeLog, "Tiempo consumido: ");
 					strcat(mensajeLog,"1 ns");
-					printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);	
+					printLog("Thread VDA","0",0,"DEBUG",mensajeLog,logActivada);	
 
 					leer(ptr->dirLogica,datos);
 					strcat(datos,"\0");
 					printf("\nDatos:%s\n",datos);
-					printLog("Thread VDA","0",0,"DEBUG","Cache:1 ns",1);
+					printLog("Thread VDA","0",0,"DEBUG","Cache:1 ns",logActivada);
 		}else{
 			cabezal->dirLogica=ptr->dirLogica;
 			cabezal->pista=ptr->pista;
@@ -231,12 +231,12 @@ while (lista!=NULL){
 			strcpy(mensajeLog, "Sectores Leidos: ");
 			sprintf(auxLog,"%d",ptr->dirLogica);
 			strcat(mensajeLog, auxLog);
-			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,logActivada);
 
 			strcpy(mensajeLog, "Tiempo Cosumido: ");
 			sprintf(auxLog,"%d",sumaTiempos);
 			strcat(mensajeLog, auxLog);
-			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,1);
+			printLog("Thread VDA","0",0,"DEBUG",mensajeLog,logActivada);
 		
 			contador++;
 		}
@@ -488,7 +488,7 @@ Nodo *nodo1;struct chs posDato;
 	nodo1->proximo=NULL;
 return(nodo1);
 }
-void getSectores(long dir1,long dir2,char *mensaje,HANDLE heap ){
+void getSectores(long dir1,long dir2,char *mensaje,HANDLE heap, int logActivada){
 
 Nodo *nodo,*nodo1=NULL,*nodo2=NULL, *lista=NULL;
 struct buffer info;			
@@ -503,13 +503,13 @@ struct buffer info;
 	leer(dir1,info.dato1);
 	leer(dir2,info.dato2);
 	
-	mostrarLista(lista,heap );	
+	mostrarLista(lista,heap, logActivada);	
 	
 	memcpy(mensaje,info.dato1,512);
 	memcpy(mensaje+512,info.dato2,512);
 }
 
-int putSectores(struct infoGrabar *datos,HANDLE heap ){
+int putSectores(struct infoGrabar *datos,HANDLE heap, int logActivada){
 
 Nodo *nodo1=NULL,*nodo2=NULL,*lista=NULL,*nodo;
 
@@ -525,7 +525,7 @@ int num=0;
 	lista=InsertarNodo(lista,nodo2);
 	grabar(datos->dir1,datos->dato1);
 	grabar(datos->dir2,datos->dato2);
-	mostrarLista(lista,heap );	
+	mostrarLista(lista,heap, logActivada);	
 	if(!strcmp(datos->dato1,"\0") || !strcmp(datos->dato2,"\0")){
 		num=0;
 	}

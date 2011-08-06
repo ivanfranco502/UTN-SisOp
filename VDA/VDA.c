@@ -70,7 +70,7 @@ HANDLE heapCons = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
 								i++;
 							}
 						}
-						mostrarLista(lista,heapCons);
+						mostrarLista(lista,heapCons, 1);
 						i=0;nodo=NULL;lista=NULL;
 						getchar();
 						getchar();
@@ -122,9 +122,6 @@ int main()
 	socketAux = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(SOCKET));
 	auxiliar = HeapAlloc(GetProcessHeap(), HEAP_NO_SERIALIZE, sizeof(configVDA));
 
-
-	printLog("Main VDA","0",0,"DEBUG","Comienza VDA",1);
-	
 	getConfigVDA(auxiliar);
 
 	argumentos->config = auxiliar;
@@ -177,6 +174,7 @@ unsigned __stdcall kss( void* pArguments )
 		SOCKET socketAux;
 		configVDA *auxiliar;
 		unsigned puertoKSS = 5000;
+		int logActivada=0;
 		HANDLE heapKSS = HeapCreate(HEAP_NO_SERIALIZE, 1024*1024, 0);
 
 		MPS_Package *response = HeapAlloc(GetProcessHeap(),0,sizeof(MPS_Package));
@@ -192,13 +190,15 @@ unsigned __stdcall kss( void* pArguments )
 
 		argumentos->socketOcupado = CreateMutex(NULL, FALSE, NULL);
 
+		logActivada = auxiliar->logActivada;
+
 		/*-----------------------------------Log Config----------------------------------------*/
 		strcpy(mensajeLog, "IPKernel:");
 		strcat(mensajeLog, argumentos->config->ipKSS,1);
 		strcat(mensajeLog," PortKernel:");
 		sprintf(auxLog, "%d", argumentos->config->puertoKss,1);
 		strcat(mensajeLog, auxLog);
-		printLog("Main VDA","1",0, "INFO",mensajeLog,1);
+		printLog("Main VDA","1",0, "INFO",mensajeLog,logActivada);
 		/*--------------------------------------Fin Log Config----------------------------------*/
 	
 		if ((retval = WSAStartup(0x202, &wsaData)) != 0){
@@ -231,26 +231,16 @@ unsigned __stdcall kss( void* pArguments )
     
 
         conn_socket = socket(AF_INET, socket_type, 0); // abro a socket
-       
-		/*-----------------------------IMPRIME Descriptor Socket---------------------*/
-		strcpy(mensajeLog, "Descriptor Socket: ");
-		sprintf(auxLog,"%d",conn_socket);
-		strcat(mensajeLog, auxLog);
-		printLog("Main VDA","0",0,"DEBUG",mensajeLog,1);
-		/*-------------------------------FIN--------------------------------*/
 		
 		if (conn_socket <0 ){
             fprintf(stderr,"VDA: no pude abrir el socket: Error %d\n", WSAGetLastError());
             WSACleanup();
 			exit(1);
 		}
-		/*-----------------------------LISTEN PORT----------------------------------*/
-		printLog("Main VDA","0",0,"DEBUG","Escuchando puerto",1);
-		/*---------------------------------FIN------------------------------*/
 		
 		if (connect(conn_socket, (struct sockaddr*)&server, sizeof(server)) == SOCKET_ERROR){
             fprintf(stderr,"Connect failed: %d\n", WSAGetLastError());
-			printLog("Main VDA","0",0,"ERROR","Connect failed",1);
+			printLog("Main VDA","0",0,"ERROR","Connect failed",logActivada);
 			closesocket(conn_socket);
            WSACleanup();
 	      _endthreadex( 0 );
@@ -275,7 +265,7 @@ unsigned __stdcall kss( void* pArguments )
 		
 		if(response->PayloadDescriptor == '0'){
 			perror("Error Autenticacion Handshake");
-		    printLog("Main VDA","0",0,"ERROR","Error Autenticacion Handshake",1);
+		    printLog("Main VDA","0",0,"ERROR","Error Autenticacion Handshake", logActivada);
 			closesocket(conn_socket);
            WSACleanup();
 	      _endthreadex( 0 );
@@ -286,7 +276,7 @@ unsigned __stdcall kss( void* pArguments )
 			r=recv(conn_socket,(char *) Buffer, sizeof(Buffer),0);
 			if(r==-1){
 				printf("Dio -1, el error es: %ld\n", WSAGetLastError());
-				printLog("Main VDA","0",0,"ERROR","Error en la coneccion con KSS",1);
+				printLog("Main VDA","0",0,"ERROR","Error en la coneccion con KSS", logActivada);
 			}
 			strncpy(mensaje_aux,((MPS_Package*)Buffer)->Payload,9);
 			if (!strcmp(mensaje_aux,"getCHS()")){
@@ -311,7 +301,7 @@ unsigned __stdcall kss( void* pArguments )
 					paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
 					send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
 				}else{
-					putSectores(estructura,heapKSS);
+					putSectores(estructura,heapKSS, logActivada);
 					strcpy(paqueteMPS->Payload,"OK");
 					paqueteMPS->PayloadLenght=strlen(paqueteMPS->Payload);
 					send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);
@@ -339,7 +329,7 @@ unsigned __stdcall kss( void* pArguments )
 					}
 					z=0;x=0;
 				//strcpy(datos,getSectores(dir1,dir2);
-				getSectores(dir1,dir2,dato,heapKSS);
+				getSectores(dir1,dir2,dato,heapKSS, logActivada);
 				memcpy(paqueteMPS->Payload,dato,1024);
 				paqueteMPS->PayloadLenght=1024;
 				send(conn_socket, (char *)paqueteMPS,21+paqueteMPS->PayloadLenght+1,0);

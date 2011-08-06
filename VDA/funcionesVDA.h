@@ -41,8 +41,8 @@ struct caches cache[10];
 
 
 int buscarSector(long, long );
-int putSectores(struct infoGrabar *,HANDLE);
-void getSectores(long,long,char *,HANDLE);
+int putSectores(struct infoGrabar *,HANDLE, int);
+void getSectores(long,long,char *,HANDLE, int);
 void crearBase(void);
 void grabarCabezal(long);
 long leerCabezal(void);
@@ -54,7 +54,7 @@ void borrar(long);
 void leer(long,char *);
 void grabar(long ,void *);
 Nodo* InsertarNodo(Nodo *,Nodo *);
-Nodo* mostrarLista(Nodo *,HANDLE);
+Nodo* mostrarLista(Nodo *,HANDLE, int);
 Nodo* algoritmo(Nodo *,Nodo *);
 int sectLeidos(long);
 struct chs getCHS(void);

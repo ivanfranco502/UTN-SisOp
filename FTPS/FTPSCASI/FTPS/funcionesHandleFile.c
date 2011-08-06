@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <process.h>
 #include "funcionesHandleFile.h"
+#include "funcionesLog.h"
 
 int enviarSyscallOpen(char *arg, int socketKSS, char *modoApertura){
 	char payload[50];
@@ -34,9 +35,11 @@ int enviarSyscallOpen(char *arg, int socketKSS, char *modoApertura){
 			sscanf(paqueteSyscall->Payload,"%d", &fileDescriptor);
 			return fileDescriptor;
 		}else{
+			printLog("SysOpen", "1", 0, "ERROR", paqueteSyscall->Payload);
 			return -1;
 		}
 	}else{
+		printLog("SysOpen", "1", 0, "ERROR", paqueteSyscall->Payload);
 		return -1;
 	}
 }
@@ -67,9 +70,11 @@ int enviarSyscallClose(int fileDescriptor, int socketKSS){
 		if(paqueteSyscall->PayloadDescriptor == '1'){
 			return 1;
 		}else{
+			printLog("SysClose", "1", 0, "ERROR", paqueteSyscall->Payload);
 			return 0;
 		}
 	}else{
+		printLog("SysClose", "1", 0, "ERROR", paqueteSyscall->Payload);
 		return 0;
 	}
 }
@@ -193,6 +198,7 @@ int enviarSyscallRead(int fileDescriptor, int socketKSS, SOCKET clienteDatos, HA
 			send (clienteDatos, mensaje, paqueteSyscall->PayloadLenght, 0);
 			OK = 1;
 		}else{
+			printLog("SysRead", "1", 0, "ERROR", paqueteSyscall->Payload);
 			OK = 0;
 		}
 		a++;
@@ -265,6 +271,7 @@ int enviarSyscallWrite(int fileDescriptor, int socketKSS, SOCKET clienteDatos, H
 			if(paqueteSyscall->PayloadDescriptor != '0'){
 				OK = 1;
 			}else{
+				printLog("SysWrite", "1", 0, "ERROR", paqueteSyscall->Payload);
 				OK = 0;
 			}
 		}
