@@ -137,7 +137,7 @@ int main(){
 		}
 		i=0;
 		if( !strcmp(func,"existeArchivo")){
-
+			printLog("MAIN","0",0,"INFO","existeArchivo",configuracion->logActivado);
 			while(stru[x-1]!=')'){
 					while(stru[x]!=',' && stru[x]!=')'){
 						aux[i]=stru[x];
@@ -158,6 +158,7 @@ int main(){
 				strcpy(rta,existeArchivo(vda,nomArch));
 		}
 	if( !strcmp(func,"infoArchivo")){
+		printLog("MAIN","0",0,"INFO","infoArchivo",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -178,6 +179,7 @@ int main(){
 		infoArchivo(vda,nomArch,rta);
 	}
 	if( !strcmp(func,"eliminarArchivo")){
+		 printLog("MAIN","0",0,"INFO","eliminarArchivo",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -198,6 +200,7 @@ int main(){
 		strcpy(rta,eliminarArchivo(vda,nomArch));
 	}
 	if( !strcmp(func,"crearArchivo")){
+		printLog("MAIN","0",0,"INFO","crearArchivo",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -218,6 +221,7 @@ int main(){
 		strcpy(rta,crearArchivo(vda,nomArch));
 	}
 		if( !strcmp(func,"actualizarTamanio")){
+		printLog("MAIN","0",0,"INFO","actualizarTamanio",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -242,6 +246,7 @@ int main(){
 		strcpy(rta,actualizarTamanio(vda,nomArch,val));
 	}
 	if( !strcmp(func,"crearTablaSectoresLibres")){
+		 printLog("MAIN","0",0,"INFO","crearTablaSectoresLibres",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -262,6 +267,7 @@ int main(){
 		strcpy(rta,crearTablaSectoresLibres(vda,val2));
 	}
 	if( !strcmp(func,"dosSectoresLibres")){
+		 printLog("MAIN","0",0,"INFO","dosSectoresLibres",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -278,6 +284,7 @@ int main(){
 		dosSectoresLibres(vda,rta);
 	}
 	if( !strcmp(func,"asignarSectores")){
+		 printLog("MAIN","0",0,"INFO","asignarSectores",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')' && z<2){
 				aux[i]=stru[x];
@@ -307,6 +314,7 @@ int main(){
 		strcpy(rta,asignarSectores(vda,nomArch,sectores));
 	}
 	if( !strcmp(func,"liberarSectores")){
+		 printLog("MAIN","0",0,"INFO","liberarSectores",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -334,6 +342,7 @@ int main(){
 		strcpy(rta,liberarSectores(vda,sectores));
 	}
 	if( !strcmp(func,"listarDirectorio")){
+		 printLog("MAIN","0",0,"INFO","listarDirectorio",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -350,6 +359,7 @@ int main(){
         listarDirectorio(vda,rta);
 	}
 	if( !strcmp(func,"formatear")){
+		 printLog("MAIN","0",0,"INFO","formatear",configuracion->logActivado);
 		while(stru[x-1]!=')'){
 			while(stru[x]!=',' && stru[x]!=')'){
 				aux[i]=stru[x];
@@ -370,6 +380,7 @@ int main(){
 		strcpy(rta,formatear(vda,val2));
 	}
 	    if( !strcmp(func,"tieneFormato")){
+		 printLog("MAIN","0",0,"INFO","tieneFormato",configuracion->logActivado);
                 while(stru[x-1]!=')'){
                         while(stru[x]!=',' && stru[x]!=')'){
                                 aux[i]=stru[x];
@@ -388,6 +399,7 @@ int main(){
 			printf("%ld\n",strlen(rta));
 			
 			if(!strcmp(func,"infoArchivo")){
+				 printLog("MAIN","0",0,"INFO","infoArchivo",configuracion->logActivado);
 				do{
 					cont2=0;
 					while(rta[cont]!=',' && rta[cont] != '\0'){
