@@ -11,6 +11,15 @@
 #include "funcionesConfig.h"
 #include "funcionesLog.h"
 
+#define BYTETOBINARYPATTERN "%d%d%d%d%d%d%d%d"
+#define BYTETOBINARY(byte)  (byte & 0x80 ? 1 : 0), \
+                            (byte & 0x40 ? 1 : 0), \
+                            (byte & 0x20 ? 1 : 0), \
+                            (byte & 0x10 ? 1 : 0), \
+                            (byte & 0x08 ? 1 : 0), \
+                            (byte & 0x04 ? 1 : 0), \
+                            (byte & 0x02 ? 1 : 0), \
+                            (byte & 0x01 ? 1 : 0)
 #define MAX_BLOQUES 100000
 #define SOCK_PATH "echo_socket"
 
@@ -40,6 +49,8 @@ char* formatear (char* , int);
 char* tieneFormato (char *);
 void listarDirectorio(char *, char *);
 void tamanioArchivo (char *, char *, char *);
+void desempaquetarbits(char* , unsigned char *, int);
+unsigned char *empaquetarbits(char * );
 
 
 int main(){
@@ -917,3 +928,40 @@ void tamanioArchivo (char *vda, char *nombre, char *tamanio){
 	//chdir("..");
 
 }
+
+void desempaquetarbits(char* str, unsigned char *bytes, int size){
+    int index;
+    int str_offset=0;
+
+    for(index=0; index<size; index++){
+        sprintf(str+str_offset, BYTETOBINARYPATTERN, BYTETOBINARY( bytes[index] ));
+        str_offset += 8;
+    }
+
+    str[str_offset] = '\0';
+}
+
+unsigned char *empaquetarbits(char* binary_str){
+    int bytes = strlen(binary_str) / 8;
+    unsigned char *data = malloc( bytes );
+    int index1, index2;
+
+    for(index1=0; index1<bytes; index1++){
+        unsigned char byte = 0;
+
+        for(index2=0; index2 < 8; index2++){
+
+            byte = byte << 1;
+
+            if( binary_str[ 8*index1 + index2 ] == '1' )
+                byte = byte | 1;
+
+        }
+
+        data[index1] = byte;
+    }
+
+    return data;
+}
+
+
