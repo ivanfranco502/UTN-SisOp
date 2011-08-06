@@ -100,9 +100,9 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 					resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
 				ReleaseMutex(datos_cliente->socketOcupado);
 				if(resultadoOperacion){
-					printLog("Thread de Datos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
+					printLog("Thread de Datos", "4", datos_cliente->threadID,"INFO" , "sys_close EXITOSO");
 				}else{
-					printLog("Thread de Datos", "ERROR", datos_cliente->threadID, "4", "sys_close Fallo");
+					printLog("Thread de Datos", "4", datos_cliente->threadID, "ERROR", "sys_close Fallo");
 				}
 			}else{
 				datos_cliente->thDatosOK = 0;
@@ -120,21 +120,23 @@ unsigned __stdcall threadDeDatos( void* pArguments ){
 			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
 				fileDescriptor = enviarSyscallOpen(datos_cliente->ftp_path, datos_cliente->socketKSS, "1");
 			ReleaseMutex(datos_cliente->socketOcupado);
-			resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, clienteDatos, datos_cliente->socketOcupado);
-			if(resultadoOperacion){
-				datos_cliente->thDatosOK = 1;
-			}else{
-				datos_cliente->thDatosOK = 0;
+			if(fileDescriptor>-1){
+				resultadoOperacion = enviarSyscallWrite(fileDescriptor, datos_cliente->socketKSS, clienteDatos, datos_cliente->socketOcupado);
+				if(resultadoOperacion){
+					datos_cliente->thDatosOK = 1;
+				}else{
+					datos_cliente->thDatosOK = 0;
+				}
+			
+				WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
+					resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
+				ReleaseMutex(datos_cliente->socketOcupado);
+				if(resultadoOperacion){
+					printLog("Thread de Datos", "4", datos_cliente->threadID,"INFO" , "sys_close EXITOSO");
+				}else{
+					printLog("Thread de Datos", "4", datos_cliente->threadID, "ERROR", "sys_close Fallo");
+				}
 			}
-			WaitForSingleObject(datos_cliente->socketOcupado, INFINITE);
-				resultadoOperacion = enviarSyscallClose(fileDescriptor, datos_cliente->socketKSS);
-			ReleaseMutex(datos_cliente->socketOcupado);
-			if(resultadoOperacion){
-				printLog("Thread de Datos", "INFO", datos_cliente->threadID, "4", "sys_close EXITOSO");
-			}else{
-				printLog("Thread de Datos", "ERROR", datos_cliente->threadID, "4", "sys_close Fallo");
-			}
-
 			break;
 
 		case 'L':

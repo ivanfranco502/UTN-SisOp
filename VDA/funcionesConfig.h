@@ -8,6 +8,7 @@ typedef struct  {
 	int retardoRotacional;
 	int posicionCabezal;
 	int cacheActivada; 
+	int logActivada;
 }configVDA;
 
 void obtenerStructVDA(char *, configVDA *configuracionInicial);
